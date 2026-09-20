@@ -1,8 +1,44 @@
 ---
 import Base from '../layouts/Base.astro'
+import CardExperimento from '../components/CardExperimento.astro'
+import { getCollection } from 'astro:content'
+
+const todos = await getCollection('experimentos')
+const experimentos = todos
+  .filter((experimento) => !import.meta.env.PROD || experimento.data.status === 'publicado')
+  .sort((a, b) => b.data.data.valueOf() - a.data.data.valueOf())
 ---
 
 <Base titulo="rafinha.xyz">
   <h1>rafinha.xyz</h1>
-  <p class="leitura">Laboratório de experimentos interativos.</p>
+  <p class="leitura">
+    Laboratório pessoal de experimentos interativos — coisas pequenas, feitas pra
+    aprender e brincar.
+  </p>
+
+  {
+    experimentos.length > 0 ? (
+      <div class="grid-experimentos">
+        {experimentos.map((experimento) => (
+          <CardExperimento experimento={experimento} />
+        ))}
+      </div>
+    ) : (
+      <p class="aviso-vazio">Primeiro experimento a caminho.</p>
+    )
+  }
 </Base>
+
+<style>
+  .grid-experimentos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .aviso-vazio {
+    margin-top: 2rem;
+    color: var(--texto-suave);
+  }
+</style>
