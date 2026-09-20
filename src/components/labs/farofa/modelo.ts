@@ -30,6 +30,7 @@ export type Resultado = {
   faixas: Record<'G' | 'U' | 'S', Faixa>
   veredito: Veredito
   porcoes: number
+  pesoFinal: number
   polemica: number
   receita: LinhaReceita[]
   preparo: string[]
@@ -39,6 +40,14 @@ type ItemAtivo = { ingrediente: Ingrediente; gramas: number }
 
 function clamp(valor: number, minimo: number, maximo: number): number {
   return Math.max(minimo, Math.min(maximo, valor))
+}
+
+export function pct(valor: number): string {
+  return `${Math.round(valor * 100)}%`
+}
+
+export function pct1(valor: number): string {
+  return `${(valor * 100).toFixed(1).replace('.', ',')}%`
 }
 
 function faixaDe(valor: number, minimo: number, maximo: number): Faixa {
@@ -341,6 +350,7 @@ export function simular(estado: Estado): Resultado {
     faixas,
     veredito,
     porcoes,
+    pesoFinal,
     polemica,
     receita,
     preparo,

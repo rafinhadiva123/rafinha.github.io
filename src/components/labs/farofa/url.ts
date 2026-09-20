@@ -1,4 +1,5 @@
-import type { Estado, Farinha } from './modelo'
+import type { Estado } from './modelo'
+import type { Farinha } from './ingredientes'
 
 const codigoPorFarinha: Record<Farinha, string> = {
   'mandioca-fina': 'mf',

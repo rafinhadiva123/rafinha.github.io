@@ -29,7 +29,7 @@ describe('simular', () => {
 
   test('300 g de farinha + 300 g de ovo mexido vira pirão', () => {
     const resultado = simular(
-      estadoBase({ ingredientes: { '11': 300 }, tostagem: 2 }),
+      estadoBase({ ingredientes: { ovo: 300 }, tostagem: 2 }),
     )
     expect(resultado.metricas.U).toBeGreaterThan(0.45)
     expect(resultado.veredito.titulo).toBe('Isso virou pirão.')
@@ -43,13 +43,13 @@ describe('simular', () => {
 
   test('30 g de sal em 300 g de farinha fica salgada demais', () => {
     const resultado = simular(
-      estadoBase({ ingredientes: { '1': 60 }, sal: 30 }),
+      estadoBase({ ingredientes: { manteiga: 60 }, sal: 30 }),
     )
     expect(resultado.veredito.titulo).toBe('Salgada demais.')
   })
 
   test('monotonicidade: subir a tostagem nunca aumenta U', () => {
-    const estado = estadoBase({ ingredientes: { '6': 80, '11': 60 } })
+    const estado = estadoBase({ ingredientes: { cebola: 80, ovo: 60 } })
     const valoresU = Array.from({ length: 11 }, (_, tostagem) =>
       simular({ ...estado, tostagem }).metricas.U,
     )
@@ -61,7 +61,7 @@ describe('simular', () => {
   test('monotonicidade: subir a castanha nunca diminui C', () => {
     const estado = estadoBase({ tostagem: 5 })
     const valoresC = Array.from({ length: 16 }, (_, passo) =>
-      simular({ ...estado, ingredientes: { '9': passo * 10 } }).metricas.C,
+      simular({ ...estado, ingredientes: { castanha: passo * 10 } }).metricas.C,
     )
     for (let i = 1; i < valoresC.length; i++) {
       expect(valoresC[i]).toBeGreaterThanOrEqual(valoresC[i - 1])

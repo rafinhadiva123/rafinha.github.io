@@ -8,7 +8,7 @@ export const presets: Record<NomePreset, { nome: string; estado: Estado }> = {
     estado: {
       farinha: 'mandioca-grossa',
       gramasFarinha: 300,
-      ingredientes: { '1': 40, '3': 80, '6': 50, '7': 15, '8': 10 },
+      ingredientes: { manteiga: 40, bacon: 80, cebola: 50, alho: 15, cheiroverde: 10 },
       sal: 3,
       tostagem: 6,
       pessoas: 4,
@@ -19,7 +19,7 @@ export const presets: Record<NomePreset, { nome: string; estado: Estado }> = {
     estado: {
       farinha: 'mandioca-fina',
       gramasFarinha: 300,
-      ingredientes: { '1': 40, '13': 30, '9': 50, '11': 60, '6': 50 },
+      ingredientes: { manteiga: 40, passas: 30, castanha: 50, ovo: 60, cebola: 50 },
       sal: 3,
       tostagem: 5,
       pessoas: 4,
@@ -30,7 +30,7 @@ export const presets: Record<NomePreset, { nome: string; estado: Estado }> = {
     estado: {
       farinha: 'mandioca-fina',
       gramasFarinha: 300,
-      ingredientes: { '1': 70, '12': 80, '6': 50 },
+      ingredientes: { manteiga: 70, banana: 80, cebola: 50 },
       sal: 3,
       tostagem: 6,
       pessoas: 4,
@@ -41,7 +41,7 @@ export const presets: Record<NomePreset, { nome: string; estado: Estado }> = {
     estado: {
       farinha: 'mandioca-torrada',
       gramasFarinha: 300,
-      ingredientes: { '2': 30, '4': 80, '5': 60, '15': 20 },
+      ingredientes: { dende: 30, calabresa: 80, coalho: 60, pimenta: 20 },
       sal: 2,
       tostagem: 7,
       pessoas: 4,
@@ -52,7 +52,7 @@ export const presets: Record<NomePreset, { nome: string; estado: Estado }> = {
     estado: {
       farinha: 'mandioca-grossa',
       gramasFarinha: 300,
-      ingredientes: { '2': 30, '6': 50, '7': 15, '9': 50, '14': 30, '8': 10 },
+      ingredientes: { dende: 30, cebola: 50, alho: 15, castanha: 50, couve: 30, cheiroverde: 10 },
       sal: 3,
       tostagem: 6,
       pessoas: 4,
