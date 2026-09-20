@@ -1,0 +1,19 @@
+{
+  "name": "rafinha.xyz",
+  "short_name": "rafinha.xyz",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "rgb(190, 160, 183)",
+  "background_color": "rgb(190, 160, 183)",
+  "display": "standalone"
+}
