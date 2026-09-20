@@ -1,0 +1,355 @@
+.simulador {
+  --cor-sucesso: var(--destaque);
+  --cor-alerta: #d9a441;
+  --cor-erro: #e5484d;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 800px) {
+  .simulador {
+    grid-template-columns: 1fr;
+  }
+}
+
+.simulador__controles,
+.simulador__resultado {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  min-width: 0;
+}
+
+.simulador h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.simulador h3 {
+  font-size: 0.95rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.simulador button {
+  font: inherit;
+  color: var(--texto);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+
+.simulador button:hover {
+  border-color: var(--destaque);
+}
+
+.simulador button.ativo,
+.simulador button[aria-checked='true'] {
+  border-color: var(--destaque);
+  color: var(--destaque);
+}
+
+/* presets e farinha */
+
+.controles__presets,
+.controles__farinha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* sliders */
+
+.controle-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.controle-slider input[type='range'] {
+  width: 100%;
+  accent-color: var(--destaque);
+}
+
+.controle-slider__rotulos {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+}
+
+/* ingredientes */
+
+.controles__ingredientes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.6rem;
+}
+
+.cartao-ingrediente {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.cartao-ingrediente--inativo {
+  color: var(--texto-suave);
+  background: transparent;
+}
+
+.cartao-ingrediente--ativo {
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cartao-ingrediente__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cartao-ingrediente__cabecalho button {
+  border: none;
+  background: transparent;
+  padding: 0 0.25rem;
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.cartao-ingrediente input[type='range'] {
+  width: 100%;
+  accent-color: var(--destaque);
+}
+
+.cartao-ingrediente__valor {
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+}
+
+/* stepper de pessoas */
+
+.controle-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.controle-stepper span {
+  min-width: 1.5ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* veredito */
+
+.veredito {
+  border: 1px solid var(--borda);
+  border-left-width: 4px;
+  border-radius: var(--raio);
+  padding: 1rem;
+  background: var(--superficie);
+}
+
+.veredito h2 {
+  margin: 0 0 0.35rem;
+}
+
+.veredito p {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.veredito--sucesso {
+  border-left-color: var(--cor-sucesso);
+}
+
+.veredito--alerta {
+  border-left-color: var(--cor-alerta);
+}
+
+.veredito--erro {
+  border-left-color: var(--cor-erro);
+}
+
+/* plano umidade × crocância */
+
+.plano {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 0.75rem;
+  background: var(--superficie);
+}
+
+.plano__svg {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: calc(var(--raio) - 4px);
+  overflow: hidden;
+}
+
+.plano__zona--ideal {
+  fill: color-mix(in srgb, var(--cor-sucesso) 20%, transparent);
+}
+
+.plano__zona--alerta {
+  fill: color-mix(in srgb, var(--cor-alerta) 25%, transparent);
+}
+
+.plano__zona--erro {
+  fill: color-mix(in srgb, var(--cor-erro) 25%, transparent);
+}
+
+.plano__zona--areia {
+  fill: color-mix(in srgb, var(--texto-suave) 35%, transparent);
+}
+
+.plano__linha {
+  stroke: var(--borda);
+  stroke-width: 0.3;
+  stroke-dasharray: 1.5 1.5;
+}
+
+.plano__ponto {
+  fill: var(--texto);
+  stroke: var(--fundo);
+  stroke-width: 1.2;
+}
+
+.plano__eixos {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+  margin-top: 0.35rem;
+}
+
+.plano__legenda {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* barras de faixa */
+
+.barras-faixa {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.barra-faixa__cabecalho {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+}
+
+.barra-faixa__trilho {
+  position: relative;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--borda);
+}
+
+.barra-faixa__ideal {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cor-sucesso) 45%, transparent);
+}
+
+.barra-faixa__marcador {
+  position: absolute;
+  top: 50%;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--texto);
+  border: 2px solid var(--fundo);
+  transform: translate(-50%, -50%);
+}
+
+/* medidores */
+
+.medidores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.medidor-rendimento {
+  margin: 0;
+  font-weight: 700;
+}
+
+.medidor-polemica {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 180px;
+}
+
+.medidor-polemica__trilho {
+  flex: 1;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--borda);
+  overflow: hidden;
+}
+
+.medidor-polemica__preenchimento {
+  height: 100%;
+  background: var(--cor-alerta);
+}
+
+/* receita */
+
+.tabela-receita {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tabela-receita th,
+.tabela-receita td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--borda);
+}
+
+.lista-preparo {
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* ações */
+
+.acoes {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.acoes__mensagem {
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  margin: 0;
+}
