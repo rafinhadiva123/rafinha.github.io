@@ -1,0 +1,88 @@
+---
+import type { CollectionEntry } from 'astro:content'
+
+interface Props {
+  experimento: CollectionEntry<'experimentos'>
+}
+
+const { experimento } = Astro.props
+const { titulo, resumo, data, tags } = experimento.data
+const dataFormatada = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(data)
+---
+
+<article class="card-experimento">
+  <a class="card-experimento__link" href={`/experimentos/${experimento.id}`}>
+    <h3 class="card-experimento__titulo">{titulo}</h3>
+    <p class="card-experimento__resumo">{resumo}</p>
+    <div class="card-experimento__rodape">
+      <time datetime={data.toISOString()}>{dataFormatada}</time>
+      {
+        tags.length > 0 && (
+          <ul class="card-experimento__tags">
+            {tags.map((tag) => (
+              <li>{tag}</li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+  </a>
+</article>
+
+<style>
+  .card-experimento {
+    border: 1px solid var(--borda);
+    border-radius: var(--raio);
+    background: var(--superficie);
+  }
+
+  .card-experimento__link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: var(--espaco);
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .card-experimento:has(.card-experimento__link:hover),
+  .card-experimento:has(.card-experimento__link:focus-visible) {
+    border-color: var(--destaque);
+  }
+
+  .card-experimento__titulo {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .card-experimento__resumo {
+    margin: 0;
+    color: var(--texto-suave);
+    flex: 1;
+  }
+
+  .card-experimento__rodape {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--texto-suave);
+  }
+
+  .card-experimento__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .card-experimento__tags li {
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    padding: 0.1rem 0.6rem;
+  }
+</style>

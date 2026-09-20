@@ -1,0 +1,26 @@
+---
+titulo: 'Exemplo de experimento'
+resumo: 'Arquivo de referência pra formato: frontmatter, corpo em MDX e onde entraria a ilha interativa.'
+data: 2026-01-01
+tags: ['referência']
+status: 'rascunho'
+destaque: false
+---
+
+Este arquivo é só uma referência de formato — fica em `status: rascunho`, então
+aparece durante o desenvolvimento (`npm run dev`) mas **não** entra no build de
+produção.
+
+Um experimento real segue esta estrutura:
+
+1. Frontmatter com os campos do schema em `src/content.config.ts`.
+2. Texto de contexto em MDX, explicando o que o experimento faz e por quê.
+3. A ilha interativa, embutida diretamente no corpo com `client:load`:
+
+```mdx
+import MeuExperimento from '../../components/labs/meu-experimento/MeuExperimento.tsx'
+
+<MeuExperimento client:load />
+```
+
+O próximo experimento a seguir esse padrão é o simulador de farofa.
