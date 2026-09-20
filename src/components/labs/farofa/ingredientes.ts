@@ -3,39 +3,49 @@ export type Farinha = 'mandioca-fina' | 'mandioca-grossa' | 'mandioca-torrada' |
 export type DadosFarinha = {
   id: Farinha
   nome: string
+  desc: string
   absorcao: number
   crocanciaBase: number
   gramasPorXicara: number
+  cor: string
 }
 
 export const farinhas: Record<Farinha, DadosFarinha> = {
   'mandioca-fina': {
     id: 'mandioca-fina',
     nome: 'Mandioca fina',
+    desc: 'absorve muito',
     absorcao: 1.0,
     crocanciaBase: 0,
     gramasPorXicara: 120,
+    cor: '#efdfb8',
   },
   'mandioca-grossa': {
     id: 'mandioca-grossa',
     nome: 'Mandioca grossa (biju)',
+    desc: 'leve, crocante',
     absorcao: 0.6,
     crocanciaBase: 2,
     gramasPorXicara: 90,
+    cor: '#f2e4c2',
   },
   'mandioca-torrada': {
     id: 'mandioca-torrada',
     nome: 'Mandioca torrada/flocada',
+    desc: 'meio-termo',
     absorcao: 0.8,
     crocanciaBase: 1,
     gramasPorXicara: 110,
+    cor: '#e3caa0',
   },
   fuba: {
     id: 'fuba',
     nome: 'Fubá (milho)',
+    desc: 'empapa fácil',
     absorcao: 1.2,
     crocanciaBase: -1,
     gramasPorXicara: 160,
+    cor: '#f4d780',
   },
 }
 
@@ -61,11 +71,12 @@ export type Ingrediente = {
   categoria: Categoria
   gramasPadrao: number
   gramasPorXicara: number
+  cor: string
 }
 
 export const ingredientes: Ingrediente[] = [
   {
-    id: '1',
+    id: 'manteiga',
     nome: 'Manteiga',
     gordura: 82,
     agua: 16,
@@ -76,9 +87,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'gordura',
     gramasPadrao: 40,
     gramasPorXicara: 200,
+    cor: '#f7d24e',
   },
   {
-    id: '2',
+    id: 'dende',
     nome: 'Azeite de dendê',
     gordura: 100,
     agua: 0,
@@ -89,9 +101,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'gordura',
     gramasPadrao: 30,
     gramasPorXicara: 220,
+    cor: '#e8721f',
   },
   {
-    id: '3',
+    id: 'bacon',
     nome: 'Bacon',
     gordura: 45,
     agua: 15,
@@ -102,9 +115,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'salgado',
     gramasPadrao: 80,
     gramasPorXicara: 150,
+    cor: '#e08a7a',
   },
   {
-    id: '4',
+    id: 'calabresa',
     nome: 'Linguiça calabresa',
     gordura: 30,
     agua: 40,
@@ -115,9 +129,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'salgado',
     gramasPadrao: 80,
     gramasPorXicara: 140,
+    cor: '#c8543f',
   },
   {
-    id: '5',
+    id: 'coalho',
     nome: 'Queijo coalho',
     gordura: 25,
     agua: 40,
@@ -128,9 +143,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'salgado',
     gramasPadrao: 60,
     gramasPorXicara: 130,
+    cor: '#f5ecd0',
   },
   {
-    id: '6',
+    id: 'cebola',
     nome: 'Cebola',
     gordura: 0,
     agua: 89,
@@ -141,9 +157,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'aromático',
     gramasPadrao: 50,
     gramasPorXicara: 160,
+    cor: '#dcab6e',
   },
   {
-    id: '7',
+    id: 'alho',
     nome: 'Alho',
     gordura: 0,
     agua: 59,
@@ -154,9 +171,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'aromático',
     gramasPadrao: 15,
     gramasPorXicara: 150,
+    cor: '#f6f0e0',
   },
   {
-    id: '8',
+    id: 'cheiroverde',
     nome: 'Cheiro-verde',
     gordura: 0,
     agua: 90,
@@ -167,9 +185,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'aromático',
     gramasPadrao: 10,
     gramasPorXicara: 40,
+    cor: '#5fae42',
   },
   {
-    id: '9',
+    id: 'castanha',
     nome: 'Castanha-de-caju',
     gordura: 44,
     agua: 5,
@@ -180,9 +199,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'crocante',
     gramasPadrao: 50,
     gramasPorXicara: 140,
+    cor: '#e8c98a',
   },
   {
-    id: '10',
+    id: 'amendoim',
     nome: 'Amendoim torrado',
     gordura: 49,
     agua: 2,
@@ -193,9 +213,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'crocante',
     gramasPadrao: 50,
     gramasPorXicara: 150,
+    cor: '#c9905a',
   },
   {
-    id: '11',
+    id: 'ovo',
     nome: 'Ovo mexido',
     gordura: 10,
     agua: 75,
@@ -206,9 +227,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'liga',
     gramasPadrao: 60,
     gramasPorXicara: 120,
+    cor: '#f6c63f',
   },
   {
-    id: '12',
+    id: 'banana',
     nome: 'Banana-da-terra',
     gordura: 0,
     agua: 65,
@@ -219,9 +241,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'doce',
     gramasPadrao: 80,
     gramasPorXicara: 150,
+    cor: '#e5b544',
   },
   {
-    id: '13',
+    id: 'passas',
     nome: 'Uva-passa',
     gordura: 0,
     agua: 15,
@@ -232,9 +255,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'doce',
     gramasPadrao: 30,
     gramasPorXicara: 170,
+    cor: '#6b3c5e',
   },
   {
-    id: '14',
+    id: 'couve',
     nome: 'Couve fatiada',
     gordura: 0,
     agua: 90,
@@ -245,9 +269,10 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'verde',
     gramasPadrao: 30,
     gramasPorXicara: 50,
+    cor: '#3f8c33',
   },
   {
-    id: '15',
+    id: 'pimenta',
     nome: 'Pimenta-biquinho',
     gordura: 0,
     agua: 88,
@@ -258,6 +283,7 @@ export const ingredientes: Ingrediente[] = [
     categoria: 'tempero',
     gramasPadrao: 20,
     gramasPorXicara: 140,
+    cor: '#d83b2c',
   },
 ]
 
