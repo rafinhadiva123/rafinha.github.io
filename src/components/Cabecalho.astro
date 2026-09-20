@@ -1,0 +1,56 @@
+---
+import AlternadorTema from './AlternadorTema.astro'
+---
+
+<header class="cabecalho">
+  <div class="cabecalho__conteudo pagina">
+    <a class="cabecalho__marca" href="/">rafinha.xyz</a>
+    <nav class="cabecalho__nav" aria-label="Navegação principal">
+      <a href="/">Início</a>
+      <a href="/sobre">Sobre</a>
+    </nav>
+    <AlternadorTema />
+  </div>
+</header>
+
+<style>
+  .cabecalho {
+    border-bottom: 1px solid var(--borda);
+  }
+
+  .cabecalho__conteudo {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding-block: 1rem;
+  }
+
+  .cabecalho__marca {
+    font-weight: 700;
+    color: var(--texto);
+    text-decoration: none;
+  }
+
+  .cabecalho__nav {
+    display: flex;
+    gap: 1rem;
+    margin-inline-end: auto;
+  }
+
+  .cabecalho__nav a {
+    color: var(--texto-suave);
+    text-decoration: none;
+  }
+
+  .cabecalho__nav a:hover,
+  .cabecalho__nav a:focus-visible {
+    color: var(--texto);
+  }
+
+  @media (max-width: 480px) {
+    .cabecalho__conteudo {
+      flex-wrap: wrap;
+      row-gap: 0.75rem;
+    }
+  }
+</style>

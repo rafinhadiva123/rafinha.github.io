@@ -1,0 +1,66 @@
+---
+---
+
+<button
+  id="alternador-tema"
+  class="alternador-tema"
+  type="button"
+  aria-label="Alternar tema claro/escuro"
+>
+  <span aria-hidden="true" class="alternador-tema__icone">🌙</span>
+</button>
+
+<style>
+  .alternador-tema {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--borda);
+    border-radius: var(--raio);
+    background: var(--superficie);
+    color: var(--texto);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .alternador-tema:hover {
+    border-color: var(--destaque);
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var botao = document.getElementById('alternador-tema')
+    if (!botao) return
+    var icone = botao.querySelector('.alternador-tema__icone')
+
+    function temaAtual() {
+      return document.documentElement.dataset.tema === 'claro' ? 'claro' : 'escuro'
+    }
+
+    function atualizarIcone() {
+      if (icone) icone.textContent = temaAtual() === 'claro' ? '🌞' : '🌙'
+    }
+
+    atualizarIcone()
+
+    botao.addEventListener('click', function () {
+      var novoTema = temaAtual() === 'claro' ? 'escuro' : 'claro'
+
+      if (novoTema === 'claro') {
+        document.documentElement.setAttribute('data-tema', 'claro')
+      } else {
+        document.documentElement.removeAttribute('data-tema')
+      }
+
+      try {
+        localStorage.setItem('tema', novoTema)
+      } catch (e) {}
+
+      atualizarIcone()
+    })
+  })()
+</script>

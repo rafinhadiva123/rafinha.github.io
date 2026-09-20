@@ -1,0 +1,55 @@
+---
+import Cabecalho from '../components/Cabecalho.astro'
+import Rodape from '../components/Rodape.astro'
+import '../styles/tokens.css'
+import '../styles/global.css'
+
+interface Props {
+  titulo: string
+  descricao?: string
+}
+
+const {
+  titulo,
+  descricao = 'Laboratório de experimentos interativos de Rafaella.',
+} = Astro.props
+
+const canonical = new URL(Astro.url.pathname, Astro.site)
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <script is:inline>
+      ;(function () {
+        try {
+          if (localStorage.getItem('tema') === 'claro') {
+            document.documentElement.setAttribute('data-tema', 'claro')
+          }
+        } catch (e) {}
+      })()
+    </script>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo}</title>
+    <meta name="description" content={descricao} />
+    <link rel="canonical" href={canonical} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descricao} />
+    <meta property="og:url" content={canonical} />
+
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+  </head>
+  <body>
+    <Cabecalho />
+    <main class="pagina">
+      <slot />
+    </main>
+    <Rodape />
+  </body>
+</html>

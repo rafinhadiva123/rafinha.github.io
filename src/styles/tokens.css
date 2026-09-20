@@ -1,0 +1,25 @@
+:root {
+  --fundo: #0f1115;
+  --superficie: #171a21;
+  --texto: #e6e8ec;
+  --texto-suave: #9aa3b2;
+  --borda: #262b36;
+  --destaque: #7dd3a0; /* cor de acento, usada com parcimônia */
+  --fonte-texto: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fonte-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --largura-leitura: 68ch;
+  --largura-pagina: 1100px;
+  --raio: 10px;
+  --espaco: 1rem;
+}
+
+/* Mesmo acento em ambos os temas fica sem contraste AA sobre fundo claro
+   (~1.8:1) — versão mais escura da mesma cor pra manter 4.5:1+ como texto/link. */
+[data-tema='claro'] {
+  --fundo: #ffffff;
+  --superficie: #f4f5f7;
+  --texto: #1a1d23;
+  --texto-suave: #565f6d;
+  --borda: #dde1e7;
+  --destaque: #15803d;
+}
