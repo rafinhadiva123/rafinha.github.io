@@ -1,0 +1,23 @@
+---
+import { getCollection, render } from 'astro:content'
+import Experimento from '../../layouts/Experimento.astro'
+
+export async function getStaticPaths() {
+  const todos = await getCollection('experimentos')
+  const experimentos = todos.filter(
+    (experimento) => !import.meta.env.PROD || experimento.data.status === 'publicado',
+  )
+
+  return experimentos.map((experimento) => ({
+    params: { slug: experimento.id },
+    props: { experimento },
+  }))
+}
+
+const { experimento } = Astro.props
+const { Content } = await render(experimento)
+---
+
+<Experimento experimento={experimento}>
+  <Content />
+</Experimento>
