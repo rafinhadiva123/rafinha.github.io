@@ -11,6 +11,15 @@ const experimentos = defineCollection({
     tags: z.array(z.string()).default([]),
     status: z.enum(['rascunho', 'publicado']).default('rascunho'),
     destaque: z.boolean().default(false),
+    // Ajuste fino da borboleta na home. Sem isso, posição e cor saem do slug.
+    borboleta: z
+      .object({
+        cor: z.string().optional(),
+        x: z.number().min(0).max(100).optional(),
+        y: z.number().min(0).max(100).optional(),
+        tamanho: z.number().min(24).max(200).optional(),
+      })
+      .optional(),
   }),
 })
 
