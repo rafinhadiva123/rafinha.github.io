@@ -1,0 +1,568 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import Borboleta from './Borboleta.astro'
+
+interface Props {
+  experimentos: CollectionEntry<'experimentos'>[]
+}
+
+const { experimentos } = Astro.props
+
+/* Vagas do jardim: posições em % que não se sobrepõem. Cada experimento ocupa
+   uma (escolhida por hash do slug, sempre a mesma), e as que sobram viram
+   borboletas de enfeite. */
+const VAGAS = [
+  { x: 34, y: 40, w: 100, rota: 'rotaA', dur: '17s', bpm: '0.40s' },
+  { x: 68, y: 28, w: 76, rota: 'rotaB', dur: '15s', bpm: '0.34s' },
+  { x: 20, y: 66, w: 66, rota: 'rotaC', dur: '19s', bpm: '0.46s' },
+  { x: 80, y: 58, w: 60, rota: 'rotaB', dur: '21s', bpm: '0.38s' },
+  { x: 52, y: 74, w: 54, rota: 'rotaA', dur: '13s', bpm: '0.44s' },
+  { x: 58, y: 16, w: 50, rota: 'rotaC', dur: '18s', bpm: '0.36s' },
+  { x: 11, y: 32, w: 46, rota: 'rotaA', dur: '20s', bpm: '0.42s' },
+  { x: 89, y: 38, w: 42, rota: 'rotaB', dur: '16s', bpm: '0.32s' },
+]
+
+const PALETA = ['var(--b1)', 'var(--b2)', 'var(--b3)', 'var(--b4)', 'var(--b5)']
+
+function hash(texto: string) {
+  let h = 2166136261
+  for (let i = 0; i < texto.length; i++) {
+    h ^= texto.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return Math.abs(h)
+}
+
+const vagasOcupadas = new Set<number>()
+const coresUsadas = new Set<number>()
+
+const borboletas = experimentos.map((experimento) => {
+  const h = hash(experimento.id)
+
+  /* Quem está marcado como destaque pega as vagas da frente (as maiores, mais
+     ao centro); o resto cai numa vaga escolhida pelo slug. */
+  let vaga = experimento.data.destaque ? 0 : h % VAGAS.length
+  while (vagasOcupadas.has(vaga) && vagasOcupadas.size < VAGAS.length) {
+    vaga = (vaga + 1) % VAGAS.length
+  }
+  vagasOcupadas.add(vaga)
+
+  let cor = (h >>> 5) % PALETA.length
+  while (coresUsadas.has(cor) && coresUsadas.size < PALETA.length) {
+    cor = (cor + 1) % PALETA.length
+  }
+  coresUsadas.add(cor)
+
+  const pouso = VAGAS[vaga]
+  const ajuste = experimento.data.borboleta ?? {}
+
+  return {
+    id: experimento.id,
+    titulo: experimento.data.titulo,
+    resumo: experimento.data.resumo,
+    status: experimento.data.status,
+    publicado: experimento.data.status === 'publicado',
+    cor: ajuste.cor ?? PALETA[cor],
+    x: ajuste.x ?? pouso.x,
+    y: ajuste.y ?? pouso.y,
+    w: ajuste.tamanho ?? pouso.w,
+    rota: pouso.rota,
+    dur: pouso.dur,
+    bpm: pouso.bpm,
+  }
+})
+
+/* As vagas que sobraram viram enfeite: menores, sem nome e sem link. */
+const enfeites = VAGAS.map((vaga, i) => ({ ...vaga, i }))
+  .filter((vaga) => !vagasOcupadas.has(vaga.i))
+  .slice(0, 4)
+  .map((vaga, n) => ({
+    ...vaga,
+    w: Math.round(vaga.w * 0.55),
+    cor: PALETA[(n + vagasOcupadas.size) % PALETA.length],
+  }))
+
+/* Canteiro: gerado aqui no servidor com semente fixa, então o jardim é sempre
+   o mesmo e aparece mesmo sem JavaScript. */
+let semente = 7
+function sorteio() {
+  semente = (semente * 16807) % 2147483647
+  return semente / 2147483647
+}
+
+const hastes = Array.from({ length: 26 }, (_, i) => {
+  const x = 18 + i * 46 + sorteio() * 16
+  const altura = 56 + sorteio() * 116
+  const base = 200
+  const topo = base - altura
+  const curva = (sorteio() - 0.5) * 30
+  const meioX = x + curva / 2
+  const folhaY = base - altura * 0.45
+  const lado = sorteio() > 0.5 ? 1 : -1
+  const tipo = sorteio()
+
+  return {
+    caule: `M${x} ${base} Q${x + curva} ${base - altura / 2} ${meioX} ${topo}`,
+    folha: `M${meioX} ${folhaY} q${16 * lado} -12 ${26 * lado} 2 q${-14 * lado} 12 ${-26 * lado} -2 z`,
+    botao: tipo > 0.62 ? { cx: meioX, cy: topo, r: 5 + sorteio() * 4, cor: PALETA[i % PALETA.length] } : null,
+    petalas:
+      tipo > 0.3 && tipo <= 0.62
+        ? Array.from({ length: 5 }, (_, p) => {
+            const angulo = ((Math.PI * 2) / 5) * p
+            const cx = meioX + Math.cos(angulo) * 7
+            const cy = topo + Math.sin(angulo) * 7
+            return { cx, cy, giro: (angulo * 180) / Math.PI }
+          })
+        : [],
+    duracao: 7 + (i % 3) * 2,
+    atraso: -(i % 5) * 1.4,
+  }
+})
+---
+
+<div class="jardim-bloco">
+  <section class="jardim" aria-label="Jardim de experimentos">
+  <svg class="canteiro" viewBox="0 0 1200 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect x="0" y="196" width="1200" height="24" class="terra"></rect>
+    {
+      hastes.map((haste) => (
+        <g class="haste" style={`--dur-haste:${haste.duracao}s;--atraso-haste:${haste.atraso}s`}>
+          <path class="caule" d={haste.caule}></path>
+          <path class="folha" d={haste.folha}></path>
+          {haste.botao && (
+            <circle
+              class="botao"
+              cx={haste.botao.cx}
+              cy={haste.botao.cy}
+              r={haste.botao.r}
+              style={`--cor:${haste.botao.cor}`}
+            />
+          )}
+          {haste.petalas.map((petala) => (
+            <ellipse
+              class="petala"
+              cx={petala.cx}
+              cy={petala.cy}
+              rx="5"
+              ry="3.4"
+              transform={`rotate(${petala.giro} ${petala.cx} ${petala.cy})`}
+            />
+          ))}
+        </g>
+      ))
+    }
+  </svg>
+
+  {
+    borboletas.map((borboleta) =>
+      borboleta.publicado ? (
+        <a
+          class="bfly"
+          data-status={borboleta.status}
+          href={`/experimentos/${borboleta.id}`}
+          style={`--xn:${borboleta.x};--y:${borboleta.y}%;--w:${borboleta.w}px;--cor:${borboleta.cor};--rota:${borboleta.rota};--dur:${borboleta.dur};--bpm:${borboleta.bpm}`}
+        >
+          <Borboleta />
+          <span class="nome">{borboleta.titulo}</span>
+        </a>
+      ) : (
+        <span
+          class="bfly"
+          data-status={borboleta.status}
+          style={`--xn:${borboleta.x};--y:${borboleta.y}%;--w:${borboleta.w}px;--cor:${borboleta.cor};--rota:${borboleta.rota};--dur:${borboleta.dur};--bpm:${borboleta.bpm}`}
+        >
+          <Borboleta />
+          <span class="nome">{borboleta.titulo} · em breve</span>
+        </span>
+      )
+    )
+  }
+
+  {
+    enfeites.map((enfeite) => (
+      <span
+        class="bfly enfeite"
+        aria-hidden="true"
+        style={`--xn:${enfeite.x};--y:${enfeite.y}%;--w:${enfeite.w}px;--cor:${enfeite.cor};--rota:${enfeite.rota};--dur:${enfeite.dur};--bpm:${enfeite.bpm}`}
+      >
+        <Borboleta />
+      </span>
+    ))
+  }
+
+  <p class="dica">clique no jardim ↗</p>
+</section>
+
+<nav class="lista" aria-label="Experimentos">
+  <p class="lista__rotulo">Se preferir em lista</p>
+  {
+    borboletas.length > 0 ? (
+      <ul class="lista__itens">
+        {borboletas.map((borboleta) => (
+          <li>
+            {borboleta.publicado ? (
+              <a href={`/experimentos/${borboleta.id}`}>
+                <span class="lista__titulo">
+                  <span class="lista__marca" style={`--cor:${borboleta.cor}`} />
+                  {borboleta.titulo}
+                </span>
+                <span class="lista__estado">no ar</span>
+                <span class="lista__resumo">{borboleta.resumo}</span>
+              </a>
+            ) : (
+              <div class="lista__inerte">
+                <span class="lista__titulo">
+                  <span class="lista__marca lista__marca--vazia" style={`--cor:${borboleta.cor}`} />
+                  {borboleta.titulo}
+                </span>
+                <span class="lista__estado">em breve</span>
+                <span class="lista__resumo">{borboleta.resumo}</span>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="lista__vazia">Primeiro experimento a caminho.</p>
+    )
+  }
+</nav>
+</div>
+
+<style>
+  /* Os tokens ficam no bloco inteiro — o jardim e a lista usam as mesmas cores. */
+  .jardim-bloco {
+    --b1: #e2b155;
+    --b2: #e0795a;
+    --b3: #7aa7e0;
+    --b4: #b58ce0;
+    --b5: var(--destaque);
+    --caule: color-mix(in oklab, var(--destaque) 52%, var(--fundo));
+    --folhagem: color-mix(in oklab, var(--destaque) 34%, var(--fundo));
+  }
+
+  .jardim {
+    position: relative;
+    margin-top: 2rem;
+    height: clamp(340px, 54vh, 520px);
+    border: 1px solid var(--borda);
+    border-radius: var(--raio);
+    background: linear-gradient(to bottom, var(--fundo) 0%, var(--superficie) 100%);
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  :global([data-tema='claro']) .jardim-bloco {
+    --b1: #b5801c;
+    --b2: #c1522f;
+    --b3: #3f6fb5;
+    --b4: #7a4fc0;
+  }
+
+  /* ---------- canteiro ---------- */
+  .canteiro {
+    position: absolute;
+    inset: auto 0 0 0;
+    width: 100%;
+    height: clamp(140px, 30vh, 220px);
+    pointer-events: none;
+  }
+
+  .terra {
+    fill: color-mix(in oklab, var(--superficie) 70%, var(--texto) 8%);
+  }
+
+  .caule {
+    fill: none;
+    stroke: var(--caule);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+  }
+
+  .folha {
+    fill: var(--folhagem);
+  }
+
+  .botao {
+    fill: var(--cor);
+    opacity: 0.8;
+  }
+
+  .petala {
+    fill: var(--folhagem);
+    opacity: 0.75;
+  }
+
+  .haste {
+    transform-box: fill-box;
+    transform-origin: bottom center;
+    animation: balanco var(--dur-haste, 8s) ease-in-out var(--atraso-haste, 0s) infinite alternate;
+  }
+
+  @keyframes balanco {
+    from {
+      transform: rotate(-1.6deg);
+    }
+    to {
+      transform: rotate(1.8deg);
+    }
+  }
+
+  /* ---------- borboletas ---------- */
+  .bfly {
+    position: absolute;
+    left: calc(var(--xn) * 1%);
+    top: var(--y);
+    width: var(--w, 72px);
+    translate: -50% -50%;
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    color: var(--texto);
+    animation: var(--rota, rotaA) var(--dur, 16s) ease-in-out infinite alternate;
+  }
+
+  .enfeite {
+    pointer-events: none;
+  }
+
+  span.bfly {
+    cursor: default;
+  }
+
+  .nome {
+    font-family: var(--fonte-mono);
+    font-size: 0.75rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    background: var(--superficie);
+    color: var(--texto);
+    opacity: 0;
+    translate: 0 -3px;
+    transition: opacity 0.18s ease, translate 0.18s ease;
+  }
+
+  .bfly:hover .nome,
+  .bfly:focus-visible .nome {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  a.bfly:hover,
+  a.bfly:focus-visible {
+    scale: 1.1;
+    z-index: 3;
+  }
+
+  a.bfly:focus-visible {
+    outline: 2px solid var(--destaque);
+    outline-offset: 6px;
+    border-radius: var(--raio);
+  }
+
+  @keyframes rotaA {
+    from {
+      transform: translate(-16px, 10px) rotate(-4deg);
+    }
+    to {
+      transform: translate(22px, -24px) rotate(5deg);
+    }
+  }
+
+  @keyframes rotaB {
+    from {
+      transform: translate(18px, -14px) rotate(6deg);
+    }
+    to {
+      transform: translate(-20px, 16px) rotate(-5deg);
+    }
+  }
+
+  @keyframes rotaC {
+    from {
+      transform: translate(-10px, -18px) rotate(3deg);
+    }
+    to {
+      transform: translate(14px, 20px) rotate(-6deg);
+    }
+  }
+
+  /* ---------- borboletas soltas no clique ---------- */
+  .solta {
+    position: absolute;
+    width: 44px;
+    translate: -50% -50%;
+    pointer-events: none;
+    animation: sobe var(--sobe, 11s) linear forwards;
+  }
+
+  @keyframes sobe {
+    from {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 0;
+    }
+    8% {
+      opacity: 1;
+    }
+    to {
+      transform: translate(var(--fx, 60px), -76vh) rotate(var(--fr, 12deg));
+      opacity: 0;
+    }
+  }
+
+  .dica {
+    position: absolute;
+    left: 0.9rem;
+    bottom: 0.7rem;
+    margin: 0;
+    font-family: var(--fonte-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--texto-suave);
+    pointer-events: none;
+  }
+
+  /* ---------- lista ---------- */
+  .lista {
+    margin-top: 2rem;
+  }
+
+  .lista__rotulo {
+    margin: 0 0 0.75rem;
+    font-family: var(--fonte-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+  }
+
+  .lista__itens {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--borda);
+  }
+
+  .lista__itens li {
+    border-bottom: 1px solid var(--borda);
+  }
+
+  .lista__itens a,
+  .lista__inerte {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    padding-block: 0.75rem;
+    color: var(--texto);
+    text-decoration: none;
+  }
+
+  .lista__itens a:hover .lista__titulo,
+  .lista__itens a:focus-visible .lista__titulo {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .lista__titulo {
+    font-weight: 600;
+  }
+
+  .lista__marca {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 0.55rem;
+    border-radius: 50%;
+    background: var(--cor);
+  }
+
+  .lista__marca--vazia {
+    background: none;
+    box-shadow: inset 0 0 0 2px var(--cor);
+  }
+
+  .lista__estado {
+    font-family: var(--fonte-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: var(--texto-suave);
+    white-space: nowrap;
+  }
+
+  .lista__resumo {
+    grid-column: 1;
+    padding-left: 1.15rem;
+    color: var(--texto-suave);
+  }
+
+  .lista__vazia {
+    color: var(--texto-suave);
+  }
+
+  /* ---------- telas estreitas ---------- */
+  @media (max-width: 560px) {
+    .jardim {
+      cursor: pointer;
+    }
+
+    /* comprime as vagas pro miolo, pra nenhuma borboleta encostar na borda */
+    .bfly {
+      left: calc(16% + var(--xn) * 0.68%);
+      width: calc(var(--w, 72px) * 0.8);
+    }
+
+    .nome {
+      opacity: 1;
+      translate: 0 0;
+      font-size: 0.68rem;
+    }
+  }
+</style>
+
+<script>
+  const jardim = document.querySelector<HTMLElement>('.jardim')
+  const modelo = jardim?.querySelector('.bfly svg')
+
+  if (jardim && modelo) {
+    const paleta = ['--b1', '--b2', '--b3', '--b4', '--b5']
+    const soltas: HTMLElement[] = []
+
+    /* O CSS deste componente é escopado por um atributo data-astro-cid-*;
+       as borboletas criadas aqui precisam carregar o mesmo atributo. */
+    const escopo = Array.from(jardim.attributes)
+      .filter((atributo) => atributo.name.startsWith('data-astro-cid'))
+      .map((atributo) => atributo.name)
+
+    jardim.addEventListener('click', (evento) => {
+      const alvo = evento.target as Element
+      if (alvo.closest('a')) return
+
+      const area = jardim.getBoundingClientRect()
+      const nova = document.createElement('span')
+      nova.className = 'solta'
+      nova.setAttribute('aria-hidden', 'true')
+      nova.style.cssText = [
+        `left:${(evento as MouseEvent).clientX - area.left}px`,
+        `top:${(evento as MouseEvent).clientY - area.top}px`,
+        `--cor:var(${paleta[Math.floor(Math.random() * paleta.length)]})`,
+        `--bpm:${(0.3 + Math.random() * 0.22).toFixed(2)}s`,
+        `--fx:${Math.round((Math.random() - 0.5) * 260)}px`,
+        `--fr:${Math.round((Math.random() - 0.5) * 50)}deg`,
+        `--sobe:${(9 + Math.random() * 7).toFixed(1)}s`,
+        `width:${Math.round(30 + Math.random() * 22)}px`,
+      ].join(';')
+      escopo.forEach((atributo) => nova.setAttribute(atributo, ''))
+      nova.appendChild(modelo.cloneNode(true))
+      nova.addEventListener('animationend', () => nova.remove())
+
+      jardim.appendChild(nova)
+      soltas.push(nova)
+      if (soltas.length > 28) soltas.shift()?.remove()
+    })
+  }
+</script>

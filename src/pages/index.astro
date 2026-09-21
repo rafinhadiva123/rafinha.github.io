@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro'
-import CardExperimento from '../components/CardExperimento.astro'
+import Jardim from '../components/Jardim.astro'
 import { getCollection } from 'astro:content'
 
 const todos = await getCollection('experimentos')
@@ -13,32 +13,9 @@ const experimentos = todos
   <h1>rafinha.xyz</h1>
   <p class="leitura">
     Laboratório pessoal de experimentos interativos — coisas pequenas, feitas pra
-    aprender e brincar.
+    aprender e brincar. Cada borboleta com nome é um experimento; clique numa pra
+    entrar, ou clique no jardim pra soltar mais.
   </p>
 
-  {
-    experimentos.length > 0 ? (
-      <div class="grid-experimentos">
-        {experimentos.map((experimento) => (
-          <CardExperimento experimento={experimento} />
-        ))}
-      </div>
-    ) : (
-      <p class="aviso-vazio">Primeiro experimento a caminho.</p>
-    )
-  }
+  <Jardim experimentos={experimentos} />
 </Base>
-
-<style>
-  .grid-experimentos {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-
-  .aviso-vazio {
-    margin-top: 2rem;
-    color: var(--texto-suave);
-  }
-</style>

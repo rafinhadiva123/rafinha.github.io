@@ -1,0 +1,72 @@
+---
+/**
+ * Só o desenho da borboleta. Cor vem da variável --cor definida por quem usa.
+ * O bater de asa é CSS puro; o ritmo vem de --bpm.
+ */
+---
+
+<svg class="borboleta" viewBox="0 0 120 92" aria-hidden="true">
+  <g><g class="asa">
+    <path class="asa-sup" d="M60 44 C 42 8, 8 12, 14 40 C 18 56, 42 58, 60 44 Z"></path>
+    <path class="asa-inf" d="M60 47 C 46 58, 24 62, 24 76 C 24 88, 48 78, 60 54 Z"></path>
+  </g></g>
+  <g transform="translate(120,0) scale(-1,1)"><g class="asa">
+    <path class="asa-sup" d="M60 44 C 42 8, 8 12, 14 40 C 18 56, 42 58, 60 44 Z"></path>
+    <path class="asa-inf" d="M60 47 C 46 58, 24 62, 24 76 C 24 88, 48 78, 60 54 Z"></path>
+  </g></g>
+  <path class="corpo" d="M60 34 C 63.4 44, 63.4 62, 60 72 C 56.6 62, 56.6 44, 60 34 Z"></path>
+  <path class="antena" d="M60 35 C 57 26, 53 21, 48 19"></path>
+  <path class="antena" d="M60 35 C 63 26, 67 21, 72 19"></path>
+</svg>
+
+<style>
+  .borboleta {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .asa {
+    transform-box: fill-box;
+    transform-origin: 100% 50%;
+    animation: bate var(--bpm, 0.42s) ease-in-out infinite alternate;
+  }
+
+  .asa-sup {
+    fill: var(--cor, var(--destaque));
+  }
+
+  .asa-inf {
+    fill: color-mix(in oklab, var(--cor, var(--destaque)) 72%, var(--fundo));
+  }
+
+  .corpo {
+    fill: color-mix(in oklab, var(--texto) 65%, var(--fundo));
+  }
+
+  .antena {
+    fill: none;
+    stroke: color-mix(in oklab, var(--texto) 65%, var(--fundo));
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+
+  /* Experimento ainda não publicado: asa só de contorno. */
+  :global(.bfly[data-status='rascunho']) .asa-sup,
+  :global(.bfly[data-status='rascunho']) .asa-inf {
+    fill: none;
+    stroke: var(--cor, var(--destaque));
+    stroke-width: 3.4;
+    stroke-linejoin: round;
+  }
+
+  @keyframes bate {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0.38);
+    }
+  }
+</style>
