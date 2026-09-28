@@ -1,0 +1,19 @@
+---
+titulo: 'Simulador de escritório'
+resumo: 'A sala em 3D, com as duas mesas, a TV, o quadro branco e todo mundo no lugar. Gire, aproxime, peça café pra todos ou ligue a discoteca.'
+data: 2026-09-28
+tags: ['3d', 'three.js', 'simulador']
+status: 'publicado'
+largura: 'larga'
+---
+
+import SimuladorEscritorio from '../../components/labs/escritorio/SimuladorEscritorio.astro'
+
+A sala em 3D: Mesa 1 com cinco de cada lado, Mesa 2 encostada na parede, TV na
+ponta das mesas. Gire, aproxime e clique em quem quiser.
+
+<SimuladorEscritorio />
+
+Roda 100% no navegador, com [three.js](https://threejs.org/) desenhando tudo em
+WebGL — sem modelo 3D pronto: cada pessoa, cadeira e caneca é montada com
+formas simples no código.

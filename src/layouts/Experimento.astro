@@ -7,7 +7,7 @@ interface Props {
 }
 
 const { experimento } = Astro.props
-const { titulo, resumo, data, tags } = experimento.data
+const { titulo, resumo, data, tags, largura } = experimento.data
 const dataFormatada = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(data)
 ---
 
@@ -28,7 +28,7 @@ const dataFormatada = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).fo
         }
       </div>
     </header>
-    <div class="experimento__corpo leitura">
+    <div class:list={['experimento__corpo', largura === 'larga' ? 'experimento__corpo--larga' : 'leitura']}>
       <slot />
     </div>
   </article>
@@ -62,5 +62,9 @@ const dataFormatada = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).fo
     border: 1px solid var(--borda);
     border-radius: 999px;
     padding: 0.1rem 0.6rem;
+  }
+
+  .experimento__corpo--larga > :global(:is(p, ul, ol, h2, h3, blockquote)) {
+    max-width: var(--largura-leitura);
   }
 </style>

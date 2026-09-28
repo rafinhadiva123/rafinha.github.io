@@ -11,6 +11,9 @@ const experimentos = defineCollection({
     tags: z.array(z.string()).default([]),
     status: z.enum(['rascunho', 'publicado']).default('rascunho'),
     destaque: z.boolean().default(false),
+    // 'larga' solta o corpo da página até a largura do site (cenas grandes);
+    // o texto corrido continua na largura de leitura.
+    largura: z.enum(['leitura', 'larga']).default('leitura'),
     // Ajuste fino da borboleta na home. Sem isso, posição e cor saem do slug.
     borboleta: z
       .object({
