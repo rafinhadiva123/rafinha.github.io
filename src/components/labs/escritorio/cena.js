@@ -3,6 +3,7 @@
 // Tudo é montado dentro de `raiz`, o bloco do SimuladorEscritorio.astro.
 import * as THREE from 'three'
 import { PESSOAS, N, MESAS, STATUS, FORA, COLS, LUGAR } from './pessoas.js'
+import { desenharQuadro } from './quadro.js'
 
 export function iniciar(raiz) {
   const $ = s => raiz.querySelector(s);
@@ -252,168 +253,14 @@ export function iniciar(raiz) {
     scene.add(g); grupos[i] = g;
   }
 
-  /* ================= quadro branco ================= */
-  const FONTE_MARCADOR = '"Permanent Marker", "Marker Felt", "Chalkboard SE", "Comic Sans MS", cursive';
+  /* ================= quadro branco (desenho em quadro.js) ================= */
   function sorteio(semente){ let s = semente; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
-
-  function desenharQuadro(cv){
-    const x = cv.getContext("2d"), W = cv.width, H = cv.height, R = sorteio(7);
-    const PRETO = "#23262B", AZUL = "#1F4FB5", VERM = "#C8322B", VERDE = "#1E8A4C", LARANJA = "#E07A1F";
-    const f = (tam) => `${tam}px ${FONTE_MARCADOR}`;
-
-    /* fundo branco com restos de marcador mal apagado */
-    x.fillStyle = "#FBFCFC"; x.fillRect(0, 0, W, H);
-    x.globalAlpha = .05;
-    for(let k = 0; k < 30; k++){
-      x.strokeStyle = k % 2 ? AZUL : PRETO; x.lineWidth = 30 + R() * 50; x.lineCap = "round";
-      x.beginPath(); const a = R() * W, b = R() * H;
-      x.moveTo(a, b); x.bezierCurveTo(a + 120, b - 60, a + 260, b + 50, a + 380 * R(), b + 30); x.stroke();
-    }
-    x.globalAlpha = 1;
-
-    /* traço de marcador tremido */
-    function linha(pts, cor, w){
-      x.strokeStyle = cor; x.lineWidth = w || 7; x.lineCap = "round"; x.lineJoin = "round"; x.beginPath();
-      for(let k = 0; k < pts.length - 1; k++){
-        const [x1, y1] = pts[k], [x2, y2] = pts[k + 1], n = Math.max(2, Math.hypot(x2 - x1, y2 - y1) / 40 | 0);
-        for(let j = 0; j <= n; j++){
-          const t = j / n, px = x1 + (x2 - x1) * t + (R() - .5) * 3.2, py = y1 + (y2 - y1) * t + (R() - .5) * 3.2;
-          (k === 0 && j === 0) ? x.moveTo(px, py) : x.lineTo(px, py);
-        }
-      }
-      x.stroke();
-    }
-    function seta(x1, y1, x2, y2, cor, w){
-      linha([[x1, y1], [x2, y2]], cor, w);
-      const a = Math.atan2(y2 - y1, x2 - x1), L = 22;
-      linha([[x2 - L * Math.cos(a - .45), y2 - L * Math.sin(a - .45)], [x2, y2], [x2 - L * Math.cos(a + .45), y2 - L * Math.sin(a + .45)]], cor, w);
-    }
-    function texto(t, px, py, tam, cor, ang, alinhar){
-      x.save(); x.translate(px, py); x.rotate(ang || 0); x.fillStyle = cor; x.font = f(tam);
-      x.textAlign = alinhar || "left"; x.textBaseline = "middle"; x.fillText(t, 0, 0); x.restore();
-    }
-    function hachura(rx, ry, rw, rh, cor, passo){
-      x.save(); x.beginPath(); x.rect(rx, ry, rw, rh); x.clip();
-      x.strokeStyle = cor; x.lineWidth = 4; x.globalAlpha = .75;
-      for(let d = -rh; d < rw + rh; d += passo || 16){ x.beginPath(); x.moveTo(rx + d, ry + rh); x.lineTo(rx + d + rh, ry); x.stroke(); }
-      x.restore();
-    }
-
-    /* título */
-    texto("PLANEJAMENTO ESTRATÉGICO Q4 (?)", 70, 72, 54, PRETO, -.012);
-    linha([[70, 112], [300, 118], [560, 110], [860, 120], [1000, 114]], VERM, 6);
-
-    /* 1 — CAFÉS × PRODUTIVIDADE */
-    texto("CAFÉS × PRODUTIVIDADE", 110, 180, 40, AZUL);
-    seta(120, 640, 120, 225, PRETO, 6); seta(120, 640, 680, 640, PRETO, 6);
-    texto("produtividade", 82, 440, 28, PRETO, -Math.PI / 2, "center");
-    ["1", "2", "3", "4", "5", "6"].forEach((n, k) => texto(n, 175 + k * 88, 676, 30, PRETO, 0, "center"));
-    texto("cafés", 660, 710, 28, PRETO, 0, "right");
-    linha([[165, 600], [255, 545], [345, 450], [440, 330], [520, 265], [560, 615], [650, 622]], AZUL, 9);
-    x.strokeStyle = VERM; x.lineWidth = 6; x.beginPath(); x.ellipse(520, 265, 44, 34, -.2, 0, Math.PI * 2); x.stroke();
-    texto("café nº 4 = gênio", 250, 222, 30, VERM, -.05);
-    seta(630, 430, 572, 585, VERM, 6);
-    texto("nº 5: PANE", 640, 398, 32, VERM, .04, "center");
-
-    /* 2 — ONDE VAI O DIA */
-    texto("ONDE VAI O DIA", 790, 180, 40, VERDE);
-    const fatias = [[.42, VERM, "reuniões"], [.23, AZUL, "meta-reunião"], [.20, VERDE, "café"], [.15, LARANJA, "trabalhar"]];
-    let a0 = -Math.PI / 2; const cx = 890, cy = 430, r = 150;
-    fatias.forEach(([v, cor]) => {
-      const a1 = a0 + v * Math.PI * 2;
-      x.beginPath(); x.moveTo(cx, cy); x.arc(cx, cy, r, a0, a1); x.closePath();
-      x.fillStyle = cor; x.globalAlpha = .22; x.fill(); x.globalAlpha = 1;
-      x.strokeStyle = cor; x.lineWidth = 7; x.stroke(); a0 = a1;
-    });
-    fatias.forEach(([v, cor, rot], k) => {
-      const y = 300 + k * 64;
-      x.fillStyle = cor; x.globalAlpha = .8; x.fillRect(1072, y - 14, 28, 28); x.globalAlpha = 1;
-      texto(`${Math.round(v * 100)}% ${rot}`, 1112, y, 28, PRETO);
-    });
-    seta(1150, 590, 1000, 520, LARANJA, 5);
-    texto("só isso?!", 1160, 600, 30, LARANJA, .05);
-
-    /* 3 — NÍVEL DE CAOS */
-    texto("NÍVEL DE CAOS", 1470, 180, 40, VERM);
-    linha([[1440, 640], [1990, 640]], PRETO, 6); linha([[1440, 640], [1440, 240]], PRETO, 6);
-    const barras = [["SEG", .62, AZUL], ["TER", .38, AZUL], ["QUA", .5, AZUL], ["QUI", .74, LARANJA], ["SEX", 1.55, VERM]];
-    barras.forEach(([d, v, cor], k) => {
-      const bx = 1475 + k * 102, bw = 70, bh = Math.min(v, 1.62) * 380;
-      hachura(bx, 640 - bh, bw, bh, cor, 15);
-      linha([[bx, 640], [bx, 640 - bh], [bx + bw, 640 - bh], [bx + bw, 640]], cor, 6);
-      texto(d, bx + bw / 2, 678, 28, PRETO, 0, "center");
-    });
-    seta(1918, 118, 1918, 36, VERM, 6);
-    texto("fora da escala!!", 1880, 104, 30, VERM, -.04, "right");
-
-    /* rabiscos */
-    texto("sucesso = café² ÷ reunião", 770, 712, 34, AZUL, -.02);
-    texto("KPI?!", 1300, 132, 44, VERM, .12);
-    x.strokeStyle = PRETO; x.lineWidth = 5; x.beginPath();
-    for(let t = 0; t < 18; t += .12){ const rr = 3 + t * 2.4; x.lineTo(1340 + Math.cos(t) * rr, 680 + Math.sin(t) * rr); }
-    x.stroke();
-
-    /* 4 — AR-CONDICIONADO */
-    texto("AR-CONDICIONADO", 2130, 180, 34, AZUL);
-    seta(2170, 630, 2170, 230, PRETO, 6); seta(2170, 630, 2650, 630, PRETO, 6);
-    texto("SAARA", 2150, 262, 26, VERM, 0, "right");
-    texto("POLO NORTE", 2150, 600, 26, AZUL, 0, "right");
-    ["8h", "10h", "12h", "14h", "16h", "18h"].forEach((h, k) => texto(h, 2210 + k * 82, 668, 26, PRETO, 0, "center"));
-    const temp = [[2210, 590], [2260, 280], [2300, 585], [2345, 300], [2390, 600], [2430, 270], [2470, 592],
-                  [2510, 285], [2555, 598], [2600, 265]];
-    for(let k = 0; k < temp.length - 1; k++) linha([temp[k], temp[k + 1]], k % 2 ? AZUL : VERM, 7);
-    seta(2560, 206, 2514, 272, LARANJA, 5);
-    texto("alguém mexeu", 2500, 184, 26, LARANJA, -.04);
-
-    /* 5 — FUNIL DE IDEIAS */
-    texto("FUNIL DE IDEIAS", 2770, 180, 40, VERDE);
-    const funil = [["100 ideias", 520], ["12 reuniões", 410], ["3 slides", 300], ["1 “vamos ver”", 190], ["0 feitas", 80]];
-    const fx = 2975, f0 = 225, fh = 80;
-    funil.forEach(([rot, w], k) => {
-      const w2 = funil[k + 1] ? funil[k + 1][1] : 60, y1 = f0 + k * fh, y2 = y1 + fh;
-      x.beginPath(); x.moveTo(fx - w / 2, y1); x.lineTo(fx + w / 2, y1); x.lineTo(fx + w2 / 2, y2); x.lineTo(fx - w2 / 2, y2); x.closePath();
-      x.fillStyle = [VERDE, AZUL, LARANJA, VERM, PRETO][k]; x.globalAlpha = .16 + k * .03; x.fill(); x.globalAlpha = 1;
-      linha([[fx - w / 2, y1], [fx + w / 2, y1], [fx + w2 / 2, y2], [fx - w2 / 2, y2], [fx - w / 2, y1]], [VERDE, AZUL, LARANJA, VERM, PRETO][k], 5);
-      if(k < 4) texto(rot, fx, y1 + fh / 2, k < 3 ? 30 : 19, PRETO, 0, "center");
-    });
-    seta(3140, 670, 2998, 612, VERM, 5);
-    texto(funil[4][0] + " :(", 3150, 682, 30, VERM, .03);
-
-    /* 6 — PRIORIDADES */
-    texto("PRIORIDADES", 3330, 180, 40, VERM);
-    x.lineWidth = 7;
-    x.fillStyle = VERM; x.globalAlpha = .13; x.beginPath(); x.arc(3440, 430, 135, 0, Math.PI * 2); x.fill();
-    x.fillStyle = AZUL; x.beginPath(); x.arc(3590, 430, 135, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1;
-    x.strokeStyle = VERM; x.beginPath(); x.arc(3440, 430, 135, 0, Math.PI * 2); x.stroke();
-    x.strokeStyle = AZUL; x.beginPath(); x.arc(3590, 430, 135, 0, Math.PI * 2); x.stroke();
-    texto("URGENTE", 3378, 430, 26, VERM, 0, "center");
-    texto("IMPORTANTE", 3660, 430, 21, AZUL, 0, "center");
-    texto("TUDO", 3515, 418, 26, PRETO, 0, "center");
-    texto("?!", 3515, 455, 28, PRETO, 0, "center");
-    texto("(nada é só importante)", 3515, 612, 24, PRETO, 0, "center");
-
-    /* post-its na ponta */
-    function postit(px, py, ang, cor, faixa, linhas){
-      x.save(); x.translate(px, py); x.rotate(ang);
-      x.fillStyle = "rgba(0,0,0,.08)"; x.fillRect(8, 10, 240, 200);
-      x.fillStyle = cor; x.fillRect(0, 0, 240, 200);
-      x.fillStyle = faixa; x.fillRect(0, 0, 240, 28);
-      linhas.forEach(([t, tam, c], k) => { x.fillStyle = c || PRETO; x.font = f(tam); x.textAlign = "center";
-        x.textBaseline = "middle"; x.fillText(t, 120, 72 + k * 44); });
-      x.restore();
-    }
-    postit(3790, 150, .05, "#FFE869", "#F5D845", [["NÃO", 40], ["APAGAR!!", 36], ["(apagaram)", 24, VERM]]);
-    postit(3805, 420, -.05, "#FFB3CF", "#F79BBE", [["final_v3", 30], ["AGORA_VAI", 30], [".xlsx", 30, AZUL]]);
-
-    /* rodapé de rabiscos */
-    texto("sexta-feira ≠ dia útil (?)", 2180, 712, 30, PRETO, -.02);
-  }
 
   function quadroBranco(parede, cx, cy){
     const W = 7.4, H = 1.34;
     const cv = document.createElement("canvas"); cv.width = 4096; cv.height = Math.round(4096 * H / W);
-    desenharQuadro(cv);
     const tex = new THREE.CanvasTexture(cv);
+    desenharQuadro(cv).then(() => { tex.needsUpdate = true; }).catch(() => {});
     tex.encoding = THREE.sRGBEncoding;
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     const sup = new THREE.Mesh(new THREE.PlaneGeometry(W, H),
@@ -432,10 +279,6 @@ export function iniciar(raiz) {
     });
     caixa(.15, .045, .06, mat("#3A3D42", .8), cx + 1.4, cy - H / 2 - .03, .15, parede).castShadow = false;
 
-    /* quando a fonte de marcador chegar, redesenha */
-    if(document.fonts && document.fonts.load){
-      document.fonts.load(`40px "Permanent Marker"`).then(() => { desenharQuadro(cv); tex.needsUpdate = true; }).catch(() => {});
-    }
   }
 
   /* ================= a mesa do acumulador ================= */
