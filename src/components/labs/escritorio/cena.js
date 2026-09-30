@@ -1066,11 +1066,6 @@ export function iniciar(raiz) {
     if(m){ const i = +m[1] - 1; if(PESSOAS[i] && i !== atual) selecionar(i); }
   });
 
-  $("#legenda").innerHTML = Object.entries(STATUS).map(([k, v]) => {
-    const n = PESSOAS.filter(p => p.status === k).length;
-    return n ? `<span class="chip ${v.cls}"><i></i>${v.rot} · ${n}</span>` : "";
-  }).join("");
-
   const ini = /^#mesa-(\d{1,2})$/.exec(location.hash);
   const ok3d = iniciar3D();
   selecionar(ini && PESSOAS[+ini[1] - 1] ? +ini[1] - 1 : 12, true);

@@ -24,15 +24,12 @@ import '@fontsource/archivo/700.css'
     </div>
     <div class="hud" id="hud">arraste para girar · scroll para aproximar</div>
   </div>
-  <p class="dica">clique em alguém na cena — ou use a trilha e as setas ← → para a câmera voar até a mesa</p>
 
   <nav class="navmesas" aria-label="Navegar pelas mesas">
     <button class="seta" id="ant" type="button">←<span id="ant-nome"></span></button>
     <div class="trilha" id="trilha" aria-label="Lugares"></div>
     <button class="seta" id="prox" type="button"><span id="prox-nome"></span>→</button>
   </nav>
-
-  <div class="legenda" id="legenda"></div>
 </div>
 
 <script>
@@ -42,19 +39,12 @@ import '@fontsource/archivo/700.css'
   if (raiz) iniciar(raiz)
 </script>
 
-<!-- global porque a trilha, a legenda e o canvas são criados pelo script;
+<!-- global porque a trilha e o canvas são criados pelo script;
      tudo fica preso em .escritorio. -->
 <style is:global>
   .escritorio {
     --linha-2: color-mix(in srgb, var(--borda), var(--texto) 18%);
-    --sig-call: #e0ad52;
-    --sig-fora: #8a8d86;
     margin-block: 1.5rem;
-  }
-
-  [data-tema='claro'] .escritorio {
-    --sig-call: #8a5a12;
-    --sig-fora: #6b6d66;
   }
 
   .escritorio .cenaWrap {
@@ -176,13 +166,6 @@ import '@fontsource/archivo/700.css'
     color: var(--texto-suave);
   }
 
-  .escritorio .dica {
-    margin: 10px 2px 0;
-    font-family: var(--fonte-mono);
-    font-size: 0.78rem;
-    color: var(--texto-suave);
-  }
-
   .escritorio .navmesas {
     display: flex;
     align-items: center;
@@ -261,43 +244,6 @@ import '@fontsource/archivo/700.css'
     letter-spacing: 0.1em;
     color: var(--texto-suave);
     white-space: nowrap;
-  }
-
-  .escritorio .legenda {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 16px;
-  }
-
-  .escritorio .chip {
-    --c: var(--destaque);
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 4px 11px 4px 9px;
-    border-radius: 100px;
-    font-family: var(--fonte-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    background: color-mix(in srgb, var(--c) 15%, transparent);
-    color: var(--c);
-  }
-
-  .escritorio .chip i {
-    display: block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .escritorio .chip.call {
-    --c: var(--sig-call);
-  }
-
-  .escritorio .chip.fora {
-    --c: var(--sig-fora);
   }
 
   @media (max-width: 560px) {
