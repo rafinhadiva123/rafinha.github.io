@@ -24,15 +24,11 @@ import '@fontsource/archivo/700.css'
     </div>
     <div class="hud" id="hud">arraste para girar · scroll para aproximar</div>
   </div>
-  <p class="dica">clique em alguém na cena — ou use a trilha e as setas ← → para a câmera voar até a mesa</p>
 
   <nav class="navmesas" aria-label="Navegar pelas mesas">
     <button class="seta" id="ant" type="button">←<span id="ant-nome"></span></button>
-    <div class="trilha" id="trilha" aria-label="Lugares"></div>
     <button class="seta" id="prox" type="button"><span id="prox-nome"></span>→</button>
   </nav>
-
-  <div class="legenda" id="legenda"></div>
 </div>
 
 <script>
@@ -42,19 +38,12 @@ import '@fontsource/archivo/700.css'
   if (raiz) iniciar(raiz)
 </script>
 
-<!-- global porque a trilha, a legenda e o canvas são criados pelo script;
+<!-- global porque o canvas é criado pelo script;
      tudo fica preso em .escritorio. -->
 <style is:global>
   .escritorio {
     --linha-2: color-mix(in srgb, var(--borda), var(--texto) 18%);
-    --sig-call: #e0ad52;
-    --sig-fora: #8a8d86;
     margin-block: 1.5rem;
-  }
-
-  [data-tema='claro'] .escritorio {
-    --sig-call: #8a5a12;
-    --sig-fora: #6b6d66;
   }
 
   .escritorio .cenaWrap {
@@ -176,19 +165,13 @@ import '@fontsource/archivo/700.css'
     color: var(--texto-suave);
   }
 
-  .escritorio .dica {
-    margin: 10px 2px 0;
-    font-family: var(--fonte-mono);
-    font-size: 0.78rem;
-    color: var(--texto-suave);
-  }
-
   .escritorio .navmesas {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-top: 16px;
     flex-wrap: wrap;
+    justify-content: space-between;
   }
 
   .escritorio .seta {
@@ -209,95 +192,6 @@ import '@fontsource/archivo/700.css'
   .escritorio .seta:hover {
     border-color: var(--destaque);
     color: var(--destaque);
-  }
-
-  .escritorio .trilha {
-    display: flex;
-    gap: 4px;
-    flex: 1 1 320px;
-    min-width: 0;
-    overflow-x: auto;
-    padding: 3px 2px;
-    align-items: center;
-  }
-
-  .escritorio .trilha button {
-    flex: 0 0 auto;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border-radius: 4px;
-    border: 1px solid var(--borda);
-    background: var(--superficie);
-    color: var(--texto-suave);
-    font-family: var(--fonte-mono);
-    font-size: 0.72rem;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  .escritorio .trilha button:hover {
-    border-color: var(--linha-2);
-    color: var(--texto);
-  }
-
-  .escritorio .trilha button[aria-current='true'] {
-    background: var(--destaque);
-    border-color: var(--destaque);
-    color: var(--fundo);
-    font-weight: 600;
-  }
-
-  .escritorio .trilha button.fora {
-    border-style: dashed;
-  }
-
-  .escritorio .trilha .sep {
-    flex: 0 0 auto;
-    padding: 0 6px;
-    font-family: var(--fonte-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
-    color: var(--texto-suave);
-    white-space: nowrap;
-  }
-
-  .escritorio .legenda {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 16px;
-  }
-
-  .escritorio .chip {
-    --c: var(--destaque);
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 4px 11px 4px 9px;
-    border-radius: 100px;
-    font-family: var(--fonte-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    background: color-mix(in srgb, var(--c) 15%, transparent);
-    color: var(--c);
-  }
-
-  .escritorio .chip i {
-    display: block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .escritorio .chip.call {
-    --c: var(--sig-call);
-  }
-
-  .escritorio .chip.fora {
-    --c: var(--sig-fora);
   }
 
   @media (max-width: 560px) {

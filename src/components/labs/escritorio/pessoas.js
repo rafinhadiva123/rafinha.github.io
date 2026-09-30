@@ -5,8 +5,8 @@
 
 export const PESSOAS = [
   /* --- MESA 1 · LADO A --- */
-  {nome:"Gabriel Scarlatelli", cargo:"", status:"mesa", agora:"Na mesa.", pele:"#EFCDB0", cabelo:"curto",  cor:"#4A3322", camisa:"#3E5A7A", barba:"barbinha"},
-  {nome:"André Shimono",       cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F0D3B4", cabelo:"curto",  cor:"#15110F", camisa:"#F4F3EF", social:true, olhos:"puxados"},
+  {nome:"Gabi",                cargo:"", status:"mesa", agora:"Na mesa.", pele:"#EFCDB0", cabelo:"curto",  cor:"#4A3322", camisa:"#3E5A7A", barba:"barbinha"},
+  {nome:"Shimono",             cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F0D3B4", cabelo:"curto",  cor:"#15110F", camisa:"#F4F3EF", social:true, olhos:"puxados"},
   {nome:"Formiga",             cargo:"", status:"mesa", agora:"Na mesa.", pele:"#EAC6A6", cabelo:"curto",  cor:"#3A2A1E", camisa:"#4E7A5E", altura:1.09},
   {nome:"Marlin",              cargo:"", status:"mesa", agora:"Na mesa.", pele:"#EFCDB0", cabelo:"curto",  cor:"#D2B06E", camisa:"#4C5B4A", barba:"cheia", oculos:"normal"},
   {nome:"Matias",              cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F2D4BA", cabelo:"curto",  cor:"#6B4A2E", camisa:"#33373C", altura:.93},
