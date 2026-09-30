@@ -305,25 +305,20 @@ body:has(.simulador) .simulador {
 }
 .simulador .compartimentos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-@container farofa (max-width: 400px) {
-  .simulador .compartimentos {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 10px 8px;
 }
 
 .simulador .comp {
   background: rgba(20, 38, 60, 0.55);
   border: 3px solid var(--contorno);
-  border-radius: 12px;
-  padding: 7px 8px 8px;
+  border-radius: 10px;
+  padding: 5px 5px 6px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 .simulador .comp--ativo {
   background: linear-gradient(rgba(255, 235, 180, 0.3), rgba(255, 200, 90, 0.22));
@@ -334,7 +329,7 @@ body:has(.simulador) .simulador {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   width: 100%;
   cursor: pointer;
   transition: opacity 0.12s;
@@ -343,13 +338,13 @@ body:has(.simulador) .simulador {
   opacity: 0.85;
 }
 .simulador .comp__icone svg {
-  width: 52px;
-  height: 52px;
+  width: 34px;
+  height: 34px;
   display: block;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.28));
 }
 .simulador .comp__nome {
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: 700;
   text-align: center;
   line-height: 1.15;
@@ -358,36 +353,36 @@ body:has(.simulador) .simulador {
 .simulador .comp__qtd {
   position: absolute;
   top: -9px;
-  right: -7px;
+  right: -6px;
   font-family: 'Fredoka', sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   background: var(--verde);
   color: #10240b;
   border: 3px solid var(--contorno);
   border-radius: 999px;
-  padding: 1px 7px;
+  padding: 0 5px;
   box-shadow: 0 2px 0 var(--contorno);
   z-index: 1;
 }
 .simulador .comp__passo {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 .simulador .comp__passo button {
   flex: 1;
   font-family: 'Fredoka', sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
   color: var(--branco);
   background: rgba(0, 0, 0, 0.35);
   border: 2px solid var(--contorno);
-  border-radius: 8px;
-  padding: 3px 0;
+  border-radius: 6px;
+  padding: 2px 0;
 }
 .simulador .comp__passo button:hover {
   background: rgba(0, 0, 0, 0.15);
