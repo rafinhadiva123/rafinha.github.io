@@ -20,16 +20,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <script is:inline>
-      ;(function () {
-        try {
-          if (localStorage.getItem('tema') === 'claro') {
-            document.documentElement.setAttribute('data-tema', 'claro')
-          }
-        } catch (e) {}
-      })()
-    </script>
-
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{titulo}</title>
