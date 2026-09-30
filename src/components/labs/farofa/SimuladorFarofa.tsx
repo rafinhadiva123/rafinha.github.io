@@ -57,7 +57,8 @@ function agruparIngredientes(lista: Ingrediente[]): [string, Ingrediente[]][] {
   return GRUPOS_ORDENADOS.filter((grupo) => porGrupo.has(grupo)).map((grupo) => [grupo, porGrupo.get(grupo)!])
 }
 
-const GRUPOS_DE_INGREDIENTES = agruparIngredientes(ingredientes)
+// uma grade só, mas na ordem dos grupos (gorduras primeiro, tempero por último)
+const INGREDIENTES_ORDENADOS = agruparIngredientes(ingredientes).flatMap(([, itens]) => itens)
 
 function estadoInicial(): Estado {
   return presets.churrasco.estado
@@ -211,27 +212,22 @@ export default function SimuladorFarofa() {
       <div className="estacoes">
         <section className="bandeja" aria-labelledby="titulo-ingredientes">
           <h2 id="titulo-ingredientes">Ingredientes</h2>
-          {GRUPOS_DE_INGREDIENTES.map(([grupo, itens]) => (
-            <div key={grupo}>
-              <div className="grupo-rot">{grupo}</div>
-              <div className="compartimentos">
-                {itens.map((ingrediente) => (
-                  <Compartimento
-                    key={ingrediente.id}
-                    ingrediente={ingrediente}
-                    gramas={estado.ingredientes[ingrediente.id] ?? 0}
-                    onAlternar={() =>
-                      ajustarIngrediente(
-                        ingrediente.id,
-                        estado.ingredientes[ingrediente.id] ? 0 : ingrediente.gramasPadrao,
-                      )
-                    }
-                    onAjustar={(delta) => ajustarIngrediente(ingrediente.id, (estado.ingredientes[ingrediente.id] ?? 0) + delta)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+          <div className="compartimentos">
+            {INGREDIENTES_ORDENADOS.map((ingrediente) => (
+              <Compartimento
+                key={ingrediente.id}
+                ingrediente={ingrediente}
+                gramas={estado.ingredientes[ingrediente.id] ?? 0}
+                onAlternar={() =>
+                  ajustarIngrediente(
+                    ingrediente.id,
+                    estado.ingredientes[ingrediente.id] ? 0 : ingrediente.gramasPadrao,
+                  )
+                }
+                onAjustar={(delta) => ajustarIngrediente(ingrediente.id, (estado.ingredientes[ingrediente.id] ?? 0) + delta)}
+              />
+            ))}
+          </div>
         </section>
 
         <section className="estacao-fogao" aria-labelledby="titulo-fogao">

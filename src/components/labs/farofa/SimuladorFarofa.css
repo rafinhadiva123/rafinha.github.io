@@ -292,21 +292,10 @@ body:has(.simulador) .simulador {
   margin: 0 0 10px;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
 }
-.simulador .grupo-rot {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #cfe2f5;
-  margin: 12px 0 6px;
-}
-.simulador .grupo-rot:first-child {
-  margin-top: 0;
-}
 .simulador .compartimentos {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
-  gap: 10px 8px;
+  gap: 12px 8px;
 }
 
 .simulador .comp {
