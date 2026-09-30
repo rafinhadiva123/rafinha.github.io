@@ -142,6 +142,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
   #aboutClose { font: 500 12px/1 var(--mono); letter-spacing: .08em; background: none; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; cursor: pointer; }
   #aboutBtn:focus-visible, #gitlink:focus-visible, #aboutClose:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
   @media (max-width: 640px) { #aboutBtn { right: 16px; } #about { right: 16px; } }
+
+  /* Música: o player do YouTube só é criado no clique, porque o navegador bloqueia som automático. */
+  #musicBtn { position: fixed; right: 112px; top: calc(24px + env(safe-area-inset-top, 0px)); z-index: 4; width: 36px; height: 36px; display: grid; place-items: center; font: 500 15px/1 var(--mono); background: rgba(18,28,16,.55); color: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 0; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #musicBtn:hover, #musicBtn[aria-pressed="true"] { background: var(--glow); color: var(--ink); }
+  #musicBtn:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
+  #music { position: fixed; width: 1px; height: 1px; left: -9999px; top: 0; border: 0; }
+  @media (max-width: 640px) { #musicBtn { right: 104px; } }
   @media (prefers-reduced-motion: reduce) { #card, .tag, .hint, #boot { transition: none; } }
 </style>
 </head>
@@ -164,6 +171,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     <button id="close" type="button">Voltar ao jardim</button>
   </div>
 </section>
+<button id="musicBtn" type="button" aria-pressed="false" aria-label="Tocar música" title="Tocar música">♪</button>
 <button id="aboutBtn" type="button" aria-expanded="false" aria-controls="about">Sobre</button>
 <section id="about" aria-label="Sobre o site">
   <div class="eyebrow">Sobre</div>
@@ -186,6 +194,31 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
   import { iniciar } from '../components/jardim/cena.js'
 
   iniciar(JSON.parse(document.getElementById('experimentos')!.textContent || '[]'))
+</script>
+<script>
+  // Música da home (YouTube). Liga criando o player escondido e desliga removendo-o.
+  const VIDEO = 'fn9r4GaQzy4'
+  const musicBtn = document.getElementById('musicBtn')!
+  musicBtn.addEventListener('click', () => {
+    const atual = document.getElementById('music')
+    if (atual) {
+      atual.remove()
+      musicBtn.setAttribute('aria-pressed', 'false')
+      musicBtn.setAttribute('aria-label', 'Tocar música')
+      musicBtn.title = 'Tocar música'
+      return
+    }
+    const player = document.createElement('iframe')
+    player.id = 'music'
+    player.src = `https://www.youtube-nocookie.com/embed/${VIDEO}?autoplay=1&loop=1&playlist=${VIDEO}&controls=0`
+    player.allow = 'autoplay; encrypted-media'
+    player.title = 'Música de fundo'
+    player.tabIndex = -1
+    document.body.appendChild(player)
+    musicBtn.setAttribute('aria-pressed', 'true')
+    musicBtn.setAttribute('aria-label', 'Parar música')
+    musicBtn.title = 'Parar música'
+  })
 </script>
 </body>
 </html>
