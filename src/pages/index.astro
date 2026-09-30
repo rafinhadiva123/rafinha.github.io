@@ -143,11 +143,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
   #aboutBtn:focus-visible, #gitlink:focus-visible, #aboutClose:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
   @media (max-width: 640px) { #aboutBtn { right: 16px; } #about { right: 16px; } }
 
-  /* Música: o player do YouTube só é criado no clique, porque o navegador bloqueia som automático. */
+  /* Música: botão que liga e desliga o áudio de fundo. */
   #musicBtn { position: fixed; right: 112px; top: calc(24px + env(safe-area-inset-top, 0px)); z-index: 4; width: 36px; height: 36px; display: grid; place-items: center; font: 500 15px/1 var(--mono); background: rgba(18,28,16,.55); color: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 0; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   #musicBtn:hover, #musicBtn[aria-pressed="true"] { background: var(--glow); color: var(--ink); }
   #musicBtn:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
-  #music { position: fixed; width: 1px; height: 1px; left: -9999px; top: 0; border: 0; }
   @media (max-width: 640px) { #musicBtn { right: 104px; } }
   @media (prefers-reduced-motion: reduce) { #card, .tag, .hint, #boot { transition: none; } }
 </style>
@@ -196,29 +195,23 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
   iniciar(JSON.parse(document.getElementById('experimentos')!.textContent || '[]'))
 </script>
 <script>
-  // Música da home (YouTube). Liga criando o player escondido e desliga removendo-o.
-  const VIDEO = 'fn9r4GaQzy4'
+  // Música da home: um <audio> local, porque o navegador só deixa tocar com som depois de um toque.
+  const musica = new Audio('/musica.mp3')
+  musica.loop = true
+  musica.preload = 'none'
   const musicBtn = document.getElementById('musicBtn')!
+  const marcar = (tocando: boolean) => {
+    const rotulo = tocando ? 'Parar música' : 'Tocar música'
+    musicBtn.setAttribute('aria-pressed', String(tocando))
+    musicBtn.setAttribute('aria-label', rotulo)
+    musicBtn.title = rotulo
+  }
   musicBtn.addEventListener('click', () => {
-    const atual = document.getElementById('music')
-    if (atual) {
-      atual.remove()
-      musicBtn.setAttribute('aria-pressed', 'false')
-      musicBtn.setAttribute('aria-label', 'Tocar música')
-      musicBtn.title = 'Tocar música'
-      return
-    }
-    const player = document.createElement('iframe')
-    player.id = 'music'
-    player.src = `https://www.youtube-nocookie.com/embed/${VIDEO}?autoplay=1&loop=1&playlist=${VIDEO}&controls=0`
-    player.allow = 'autoplay; encrypted-media'
-    player.title = 'Música de fundo'
-    player.tabIndex = -1
-    document.body.appendChild(player)
-    musicBtn.setAttribute('aria-pressed', 'true')
-    musicBtn.setAttribute('aria-label', 'Parar música')
-    musicBtn.title = 'Parar música'
+    if (musica.paused) musica.play().catch(() => marcar(false))
+    else musica.pause()
   })
+  musica.addEventListener('play', () => marcar(true))
+  musica.addEventListener('pause', () => marcar(false))
 </script>
 </body>
 </html>
