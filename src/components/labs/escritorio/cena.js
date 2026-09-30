@@ -2,7 +2,7 @@
 // (fixado no package.json: as APIs de cor e luz mudaram nas versões seguintes).
 // Tudo é montado dentro de `raiz`, o bloco do SimuladorEscritorio.astro.
 import * as THREE from 'three'
-import { PESSOAS, N, MESAS, STATUS, FORA, COLS, LUGAR } from './pessoas.js'
+import { PESSOAS, N, MESAS, COLS, LUGAR } from './pessoas.js'
 import { desenharQuadro } from './quadro.js'
 
 export function iniciar(raiz) {
@@ -1033,10 +1033,7 @@ export function iniciar(raiz) {
   /* ================= navegação ================= */
   function selecionar(i, semVoo){
     atual = i;
-    const p = PESSOAS[i], st = STATUS[p.status];
     if(renderer){ marcarSelecao(); if(!semVoo) olharPara(i); }
-    $("#trilha").querySelectorAll("button[data-i]").forEach(b =>
-      b.setAttribute("aria-current", +b.dataset.i === i ? "true" : "false"));
     $("#ant-nome").textContent = PESSOAS[(i - 1 + N) % N].nome;
     $("#prox-nome").textContent = PESSOAS[(i + 1) % N].nome;
     const h = "#mesa-" + String(i + 1).padStart(2, "0");
@@ -1044,15 +1041,6 @@ export function iniciar(raiz) {
   }
   function pular(passo){ selecionar((atual + passo + N) % N); }
 
-  $("#trilha").innerHTML = PESSOAS.map((p, i) => {
-    const cab = i === 0 ? '<span class="sep">M1·A</span>' : i === 5 ? '<span class="sep">M1·B</span>'
-              : i === 10 ? '<span class="sep">MESA 2</span>' : '';
-    return cab + `<button type="button" data-i="${i}" title="${p.nome} — ${STATUS[p.status].rot}"
-      class="${FORA(p.status) ? "fora" : ""}">${String(i + 1).padStart(2, "0")}</button>`;
-  }).join("");
-  $("#trilha").addEventListener("click", e => {
-    const b = e.target.closest("button[data-i]"); if(b) selecionar(+b.dataset.i);
-  });
   $("#ant").addEventListener("click", () => pular(-1));
   $("#prox").addEventListener("click", () => pular(1));
   document.addEventListener("keydown", e => {
