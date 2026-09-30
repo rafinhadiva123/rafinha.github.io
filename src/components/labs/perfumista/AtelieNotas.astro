@@ -58,17 +58,27 @@ import '@fontsource/figtree/600.css'
     --display: 'Bodoni Moda', 'Didot', 'Times New Roman', serif;
     --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
     color-scheme: light;
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
     margin-block: 1.5rem;
-    border-radius: var(--raio);
-    background: var(--bg);
     color: var(--fg);
     font-family: var(--body);
     font-size: 16px;
     line-height: 1.5;
-    padding: 28px 20px 40px;
+  }
+
+  /* O azul ocupa a página inteira: os tokens do site viram os do ateliê
+     (nos dois temas), então cabeçalho, título e rodapé ficam legíveis. */
+  html:has(.atelie) {
+    --fundo: #8fdde3;
+    --superficie: rgba(255, 255, 255, 0.62);
+    --texto: #04202a;
+    --texto-suave: #173f4b;
+    --borda: rgba(8, 70, 84, 0.24);
+    --destaque: #0a5665;
+    color-scheme: light;
+  }
+
+  html:has(.atelie) body {
+    background: transparent;
   }
 
   .atelie *,
@@ -82,9 +92,9 @@ import '@fontsource/figtree/600.css'
   }
 
   .atelie .scene {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 0;
+    z-index: -1;
     overflow: hidden;
     background:
       radial-gradient(10% 16% at 0% 100%, rgba(252, 228, 228, 0.9), transparent 100%),
@@ -106,10 +116,6 @@ import '@fontsource/figtree/600.css'
   }
 
   .atelie .wrap {
-    position: relative;
-    z-index: 1;
-    max-width: 980px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 28px;
@@ -435,10 +441,6 @@ import '@fontsource/figtree/600.css'
   }
 
   @media (min-width: 900px) {
-    .atelie {
-      padding: 28px 36px 36px;
-    }
-
     .atelie .wrap {
       gap: 22px;
     }
