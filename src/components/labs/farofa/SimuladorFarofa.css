@@ -33,20 +33,34 @@
   --sombra-dura: 0 4px 0 var(--contorno);
   --sombra-mole: 0 10px 22px rgba(20, 12, 4, 0.35);
 
-  background:
-    repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 7px),
-    repeating-linear-gradient(90deg, var(--madeira-linha) 0 64px, var(--madeira) 64px 132px),
-    var(--madeira);
   color: var(--branco);
   font-family: 'Nunito', system-ui, -apple-system, sans-serif;
   font-size: 15px;
   line-height: 1.45;
   margin-top: 2rem;
-  padding: 18px 16px 28px;
-  border-radius: 20px;
-  box-shadow: var(--sombra-mole);
   container-type: inline-size;
   container-name: farofa;
+}
+
+/* A bancada de madeira vira o fundo da tela inteira na página do simulador.
+   Os tokens do site são sobrescritos no body pra cabeçalho, texto e rodapé
+   continuarem legíveis sobre a madeira (em qualquer tema). */
+body:has(.simulador) {
+  --texto: #fffaf0;
+  --texto-suave: #f3e3be;
+  --borda: rgba(36, 26, 16, 0.45);
+  --destaque: #fff3c4;
+  background:
+    repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(90deg, #b26c31 0 64px, #c77a3c 64px 132px),
+    #c77a3c;
+  background-attachment: fixed;
+  color: var(--texto);
+  text-shadow: 0 1px 2px rgba(36, 26, 16, 0.55);
+}
+
+body:has(.simulador) .simulador {
+  text-shadow: none;
 }
 
 .simulador * {
