@@ -248,25 +248,31 @@ body:has(.simulador) .simulador {
   background: linear-gradient(var(--amarelo), #d19a1c);
 }
 
-/* ---------- layout principal ---------- */
+/* ---------- layout principal ----------
+   frigideira à esquerda; ingredientes, farinha e tempero à direita */
 .simulador .estacoes {
   display: grid;
-  grid-template-columns: minmax(0, 300px) minmax(0, 1fr) minmax(0, 260px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px) minmax(0, 260px);
   gap: 16px;
   align-items: start;
+}
+.simulador .estacao-fogao {
+  order: -1;
 }
 @container farofa (max-width: 1000px) {
   .simulador .estacoes {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .simulador .estacao-fogao {
-    order: -1;
-    grid-column: 1 / -1;
+    grid-row: span 2;
   }
 }
 @container farofa (max-width: 660px) {
   .simulador .estacoes {
     grid-template-columns: 1fr;
+  }
+  .simulador .estacao-fogao {
+    grid-row: auto;
   }
 }
 
