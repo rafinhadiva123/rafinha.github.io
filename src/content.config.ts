@@ -12,8 +12,9 @@ const experimentos = defineCollection({
     status: z.enum(['rascunho', 'publicado']).default('rascunho'),
     destaque: z.boolean().default(false),
     // 'larga' solta o corpo da página até a largura do site (cenas grandes);
-    // o texto corrido continua na largura de leitura.
-    largura: z.enum(['leitura', 'larga']).default('leitura'),
+    // o texto corrido continua na largura de leitura. 'tela' esconde o
+    // cabeçalho do experimento e entrega a janela inteira pra cena.
+    largura: z.enum(['leitura', 'larga', 'tela']).default('leitura'),
   }),
 })
 
