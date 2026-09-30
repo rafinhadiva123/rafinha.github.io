@@ -93,6 +93,24 @@ body:has(.simulador) .simulador {
   border: 0;
 }
 
+/* ---------- topo: placa + medidores lado a lado ---------- */
+.simulador .topo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+.simulador .topo > .placa,
+.simulador .topo > .medidores {
+  margin-bottom: 0;
+}
+@container farofa (max-width: 860px) {
+  .simulador .topo {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- placa do título ---------- */
 .simulador .placa {
   background: linear-gradient(#8a5a2b, #6f4620);
@@ -174,6 +192,7 @@ body:has(.simulador) .simulador {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px 18px;
   align-items: center;
+  align-content: center;
   box-shadow: var(--sombra-mole);
 }
 .simulador .medidor-topo {
