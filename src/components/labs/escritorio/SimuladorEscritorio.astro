@@ -194,6 +194,37 @@ import '@fontsource/archivo/700.css'
     color: var(--destaque);
   }
 
+  /* modo tela inteira (largura: 'tela'): a cena ocupa todo o espaço e as
+     setas das mesas flutuam sobre ela */
+  body:has(.experimento__corpo--tela) {
+    overflow-x: clip;
+  }
+
+  .experimento__corpo--tela .escritorio {
+    position: relative;
+    height: 100%;
+    margin: 0;
+  }
+
+  .experimento__corpo--tela .escritorio .cenaWrap {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .experimento__corpo--tela .escritorio .navmesas {
+    position: absolute;
+    inset: auto 12px 12px;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .experimento__corpo--tela .escritorio .seta {
+    pointer-events: auto;
+    background: color-mix(in srgb, var(--superficie) 88%, transparent);
+    backdrop-filter: blur(6px);
+  }
+
   @media (max-width: 560px) {
     .escritorio .hud {
       display: none;

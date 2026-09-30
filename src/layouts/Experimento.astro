@@ -13,22 +13,30 @@ const dataFormatada = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).fo
 
 <Base titulo={`${titulo} · rafinha.xyz`} descricao={resumo}>
   <article class="experimento">
-    <header class="experimento__cabecalho">
+    <header class:list={['experimento__cabecalho', largura === 'tela' && 'visualmente-oculto']}>
       <h1>{titulo}</h1>
-      <div class="experimento__meta">
-        <time datetime={data.toISOString()}>{dataFormatada}</time>
-        {
-          tags.length > 0 && (
-            <ul class="experimento__tags">
-              {tags.map((tag) => (
-                <li>{tag}</li>
-              ))}
-            </ul>
-          )
-        }
-      </div>
+      {
+        largura !== 'tela' && (
+          <div class="experimento__meta">
+            <time datetime={data.toISOString()}>{dataFormatada}</time>
+            {tags.length > 0 && (
+              <ul class="experimento__tags">
+                {tags.map((tag) => (
+                  <li>{tag}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )
+      }
     </header>
-    <div class:list={['experimento__corpo', largura === 'larga' ? 'experimento__corpo--larga' : 'leitura']}>
+    <div
+      class:list={[
+        'experimento__corpo',
+        largura === 'leitura' ? 'leitura' : 'experimento__corpo--larga',
+        largura === 'tela' && 'experimento__corpo--tela',
+      ]}
+    >
       <slot />
     </div>
   </article>
@@ -62,6 +70,23 @@ const dataFormatada = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).fo
     border: 1px solid var(--borda);
     border-radius: 999px;
     padding: 0.1rem 0.6rem;
+  }
+
+  /* sai do .pagina e ocupa a janela toda abaixo do cabeçalho do site
+     (padding 1rem×2 + linha 1.6rem + borda 1px) */
+  .experimento__corpo--tela {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    height: calc(100dvh - 3.6rem - 1px);
+  }
+
+  .visualmente-oculto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .experimento__corpo--larga > :global(:is(p, ul, ol, h2, h3, blockquote)) {
