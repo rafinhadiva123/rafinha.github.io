@@ -181,30 +181,32 @@ export default function SimuladorFarofa() {
 
   return (
     <div className="simulador">
-      <div className="placa">
-        <div>
-          <h1 className="contorno-texto">Simulador de Farofa</h1>
-          <div className="placa__sub">experimento · rafinha.xyz</div>
+      <div className="topo">
+        <div className="placa">
+          <div>
+            <h1 className="contorno-texto">Simulador de Farofa</h1>
+            <div className="placa__sub">experimento · rafinha.xyz</div>
+          </div>
+          <div className="receitas">
+            <span className="receitas__rotulo">Receitas</span>
+            {(Object.keys(presets) as NomePreset[]).map((chave) => (
+              <button
+                key={chave}
+                type="button"
+                className={`botao-jogo${presetAtivo === chave ? ' botao-jogo--ativo' : ''}`}
+                onClick={() => setEstado(presets[chave].estado)}
+              >
+                {presets[chave].nome}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="receitas">
-          <span className="receitas__rotulo">Receitas</span>
-          {(Object.keys(presets) as NomePreset[]).map((chave) => (
-            <button
-              key={chave}
-              type="button"
-              className={`botao-jogo${presetAtivo === chave ? ' botao-jogo--ativo' : ''}`}
-              onClick={() => setEstado(presets[chave].estado)}
-            >
-              {presets[chave].nome}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      <div
-        className="medidores"
-        dangerouslySetInnerHTML={{ __html: desenharMedidores(resultado) }}
-      />
+        <div
+          className="medidores"
+          dangerouslySetInnerHTML={{ __html: desenharMedidores(resultado) }}
+        />
+      </div>
 
       <div className="estacoes">
         <section className="bandeja" aria-labelledby="titulo-ingredientes">
