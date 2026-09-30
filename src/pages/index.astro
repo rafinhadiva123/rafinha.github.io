@@ -1,21 +1,191 @@
 ---
-import Base from '../layouts/Base.astro'
-import Jardim from '../components/Jardim.astro'
 import { getCollection } from 'astro:content'
 
+/* Home em tela cheia: o jardim 3D é a página inteira, então ela não usa o
+   layout Base (sem cabeçalho nem rodapé), só repete o <head> dele. */
 const todos = await getCollection('experimentos')
 const experimentos = todos
   .filter((experimento) => !import.meta.env.PROD || experimento.data.status === 'publicado')
-  .sort((a, b) => b.data.data.valueOf() - a.data.data.valueOf())
+  .sort((a, b) => a.data.data.valueOf() - b.data.data.valueOf())
+  .map((experimento) => ({
+    id: experimento.id,
+    titulo: experimento.data.titulo,
+    resumo: experimento.data.resumo,
+    href: `/experimentos/${experimento.id}/`,
+    rascunho: experimento.data.status !== 'publicado',
+  }))
+
+const titulo = 'rafinha.xyz · Laboratório'
+const descricao = 'Um jardim de experimentos da Rafaella. Siga as borboletas para entrar.'
+const canonical = new URL(Astro.url.pathname, Astro.site)
 ---
 
-<Base titulo="rafinha.xyz">
-  <h1>rafinha.xyz</h1>
-  <p class="leitura">
-    Laboratório pessoal de experimentos interativos — coisas pequenas, feitas pra
-    aprender e brincar. Cada borboleta com nome é um experimento; clique numa pra
-    entrar, ou clique no jardim pra soltar mais.
-  </p>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{titulo}</title>
+<meta name="description" content={descricao}>
+<meta name="theme-color" content="#1b2a1f">
+<link rel="canonical" href={canonical}>
+<meta property="og:type" content="website">
+<meta property="og:title" content={titulo}>
+<meta property="og:description" content={descricao}>
+<meta property="og:url" content={canonical}>
+<meta name="generator" content={Astro.generator}>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- global porque as etiquetas das borboletas são criadas pelo script -->
+<style is:global>
+  /* Layout: jardim em tela cheia na luz do fim da tarde; borboletas carregam etiquetas de espécime e levam aos experimentos. */
+  :root {
+    color-scheme: dark;
+    --bg: #1b2a1f;
+    --fg: #f6f0df;
+    --muted: #d8d2bb;
+    --moss: #b7d68a;
+    --glow: #ffd98a;
+    --paper: #f1e9d2;
+    --ink: #1f2a1e;
+    --line: rgba(255, 244, 214, .28);
+    --shade: rgba(14, 22, 14, .55);
+    --display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--display); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  #stage { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+  #stage.drag { cursor: grabbing; }
+  #stage.hot { cursor: pointer; }
+  #stage canvas { display: block; width: 100%; height: 100%; outline: none; }
+  #vig { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(10, 16, 8, .38) 100%); }
+  #topfade { position: fixed; left: 0; right: 0; top: 0; height: 240px; pointer-events: none; background: linear-gradient(to bottom, var(--shade), transparent); }
 
-  <Jardim experimentos={experimentos} />
-</Base>
+  header {
+    position: fixed; left: 0; right: 0; top: 0; pointer-events: none;
+    padding: 24px 24px 0; padding-top: calc(24px + env(safe-area-inset-top, 0px));
+    display: flex; flex-direction: column; gap: 6px; max-width: 34rem; text-shadow: 0 1px 14px rgba(10, 16, 8, .55);
+  }
+  .site { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--moss); }
+  h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); line-height: .98; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+  .lede { margin: 6px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.45; max-width: 26rem; text-wrap: pretty; }
+  .hint { position: fixed; right: 24px; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); font: 400 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-shadow: 0 1px 8px rgba(10,16,8,.6); pointer-events: none; text-align: right; transition: opacity .8s ease; }
+  .hint.gone { opacity: 0; }
+
+  .tag {
+    position: fixed; left: 0; top: 0; z-index: 3; margin: 0; padding: 5px 10px 5px 6px;
+    display: flex; align-items: center; gap: 7px; white-space: nowrap;
+    background: var(--paper); color: var(--ink); border: 0; border-radius: 3px 10px 10px 3px;
+    font: 500 12px/1 var(--mono); letter-spacing: .04em; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,.35);
+    transition: background .2s ease, color .2s ease, opacity .3s ease, box-shadow .2s ease; will-change: transform;
+  }
+  .tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3f5a33; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.35); }
+  .tag b { font-weight: 500; opacity: .55; }
+  .tag:hover, .tag.on { background: var(--glow); box-shadow: 0 8px 26px rgba(255,217,138,.35); }
+  .tag:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
+  .tag.dim { opacity: .4; }
+  .tag.soon { background: rgba(20, 30, 18, .45); color: var(--paper); box-shadow: inset 0 0 0 1px var(--line); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .tag.soon::before { background: var(--glow); box-shadow: none; }
+  .tag.soon:hover, .tag.soon.on { background: var(--glow); color: var(--ink); }
+
+  #card {
+    position: fixed; left: 24px; bottom: 24px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 4;
+    width: min(23rem, calc(100vw - 48px)); box-sizing: border-box;
+    background: rgba(18, 28, 16, .78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 16px;
+    transform: translateY(16px); opacity: 0; pointer-events: none;
+    transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease;
+  }
+  #card.open { transform: none; opacity: 1; pointer-events: auto; }
+  #card .eyebrow { font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--moss); }
+  #card h2 { margin: 8px 0 6px; font-size: 1.6rem; line-height: 1.05; letter-spacing: -.01em; }
+  #card p { margin: 0 0 14px; color: var(--muted); font-size: .95rem; line-height: 1.45; }
+  #card .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #open { font: 600 .95rem/1 var(--display); background: var(--glow); color: var(--ink); border: 0; border-radius: 999px; padding: 11px 18px; cursor: pointer; text-decoration: none; display: inline-block; }
+  #open:hover { filter: brightness(1.08); }
+  #open[hidden] { display: none; }
+  #close { font: 500 12px/1 var(--mono); letter-spacing: .08em; background: none; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; cursor: pointer; }
+  #close:hover { color: var(--fg); border-color: var(--fg); }
+  #open:focus-visible, #close:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
+  #boot { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); font: 500 12px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); transition: opacity 1.4s ease; pointer-events: none; z-index: 9; }
+  #boot.done { opacity: 0; }
+
+  @media (max-width: 640px) {
+    header { padding-inline: 16px; }
+    .hint { display: none; }
+    #card { left: 16px; right: 16px; width: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+    .lede { font-size: .92rem; }
+  }
+
+  #aboutBtn { position: fixed; right: 24px; top: calc(24px + env(safe-area-inset-top, 0px)); z-index: 4; font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; background: rgba(18,28,16,.55); color: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 11px 16px; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #aboutBtn:hover { background: var(--glow); color: var(--ink); }
+  #about { position: fixed; right: 24px; top: calc(72px + env(safe-area-inset-top, 0px)); z-index: 5; width: min(24rem, calc(100vw - 48px)); box-sizing: border-box; max-height: calc(100vh - 100px); overflow: auto; background: rgba(18,28,16,.86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 14px; padding: 18px; transform: translateY(-16px); opacity: 0; pointer-events: none; transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease; }
+  #about.open { transform: none; opacity: 1; pointer-events: auto; }
+  #about .eyebrow { font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--moss); }
+  #about h2 { margin: 8px 0 8px; font-size: 1.6rem; line-height: 1.05; letter-spacing: -.01em; }
+  #about p { margin: 0 0 12px; color: var(--muted); font-size: .95rem; line-height: 1.45; }
+  #about dl { margin: 0 0 14px; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: .9rem; line-height: 1.35; }
+  #about dt { font: 500 11px/1.6 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--moss); }
+  #about dd { margin: 0; color: var(--fg); }
+  #about p a { color: var(--glow); }
+  #about .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #gitlink { font: 600 .95rem/1 var(--display); background: var(--glow); color: var(--ink); border-radius: 999px; padding: 11px 18px; text-decoration: none; display: inline-block; }
+  #gitlink:hover { filter: brightness(1.08); }
+  #aboutClose { font: 500 12px/1 var(--mono); letter-spacing: .08em; background: none; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; cursor: pointer; }
+  #aboutBtn:focus-visible, #gitlink:focus-visible, #aboutClose:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
+  @media (max-width: 640px) { #aboutBtn { right: 16px; } #about { right: 16px; } }
+  @media (prefers-reduced-motion: reduce) { #card, .tag, .hint, #boot { transition: none; } }
+</style>
+</head>
+<body>
+<div id="stage" aria-hidden="true"></div>
+<div id="vig"></div><div id="topfade"></div>
+<header>
+  <span class="site">rafinha.xyz</span>
+  <h1>Laboratório</h1>
+  <p class="lede">Um jardim de experimentos. Siga as borboletas com etiqueta para entrar. Toque na grama para soltar mais.</p>
+</header>
+<div class="hint" id="hint">arraste para girar · roda para aproximar</div>
+<div id="tags"></div>
+<section id="card" aria-live="polite">
+  <div class="eyebrow" id="c-eyebrow"></div>
+  <h2 id="c-title"></h2>
+  <p id="c-desc"></p>
+  <div class="row">
+    <a id="open" href="#">Abrir experimento</a>
+    <button id="close" type="button">Voltar ao jardim</button>
+  </div>
+</section>
+<button id="aboutBtn" type="button" aria-expanded="false" aria-controls="about">Sobre</button>
+<section id="about" aria-label="Sobre o site">
+  <div class="eyebrow">Sobre</div>
+  <h2>rafinha.xyz</h2>
+  <p>Um laboratório pessoal de ideias da Rafa. Cada ideia é uma borboleta neste jardim. <a href="/sobre/">Mais sobre o site</a>.</p>
+  <dl>
+    <dt>Cena 3D</dt><dd>Three.js (r128) com shaders GLSL próprios para céu e grama</dd>
+    <dt>Código</dt><dd>Astro, com ilhas interativas em JavaScript e React</dd>
+    <dt>Hospedagem</dt><dd>GitHub Pages, domínio próprio</dd>
+  </dl>
+  <div class="row">
+    <a id="gitlink" href="https://github.com/rafinhadiva123/rafinha.github.io" target="_blank" rel="noopener">Ver no GitHub</a>
+    <button id="aboutClose" type="button">Fechar</button>
+  </div>
+</section>
+<div id="boot">Regando o jardim…</div>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;color:#f6f0df;font:16px sans-serif">Este site precisa de JavaScript.</p></noscript>
+<script id="experimentos" type="application/json" set:html={JSON.stringify(experimentos).replace(/</g, '\\u003c')}></script>
+<script>
+  import { iniciar } from '../components/jardim/cena.js'
+
+  iniciar(JSON.parse(document.getElementById('experimentos')!.textContent || '[]'))
+</script>
+</body>
+</html>
