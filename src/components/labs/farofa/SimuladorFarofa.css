@@ -596,7 +596,7 @@ body:has(.simulador) .simulador {
   gap: 16px;
   margin-top: 18px;
 }
-@container farofa (max-width: 820px) {
+@container farofa (max-width: 600px) {
   .simulador .fichas {
     grid-template-columns: 1fr;
   }
