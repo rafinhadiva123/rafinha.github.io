@@ -851,6 +851,35 @@ export function iniciar(raiz) {
     scene.add(g);
   }
 
+  /* porta-retrato em pé na mesa, virado para quem senta: coração com um nome */
+  function portaRetrato(i, nome){
+    const P = POSTO[i];
+    const cv = document.createElement("canvas"); cv.width = 256; cv.height = 320;
+    const x = cv.getContext("2d");
+    x.fillStyle = "#F7F1E6"; x.fillRect(0, 0, 256, 320);
+    x.fillStyle = "#D2334A"; x.beginPath();
+    x.moveTo(128, 272);
+    x.bezierCurveTo(30, 205, 14, 140, 34, 104);
+    x.bezierCurveTo(58, 60, 116, 62, 128, 112);
+    x.bezierCurveTo(140, 62, 198, 60, 222, 104);
+    x.bezierCurveTo(242, 140, 226, 205, 128, 272);
+    x.fill();
+    x.fillStyle = "#FFFFFF"; x.font = "italic 700 58px Georgia, serif";
+    x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(nome, 128, 160, 170);
+    const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+
+    const g = new THREE.Group(); g.position.set(P.x, .78, P.z); g.rotation.y = P.giro; scene.add(g);
+    const pe = new THREE.Group(); pe.position.set(-.44, 0, -.14); pe.rotation.y = 2.45; g.add(pe);
+    const q = new THREE.Group(); q.position.y = .105; q.rotation.x = -.16; pe.add(q);
+    const moldura = mat("#6B4A2E", .6);
+    caixa(.17, .012, .016, moldura, 0, .1, 0, q); caixa(.17, .012, .016, moldura, 0, -.1, 0, q);
+    caixa(.012, .212, .016, moldura, -.079, 0, 0, q); caixa(.012, .212, .016, moldura, .079, 0, 0, q);
+    caixa(.17, .21, .006, moldura, 0, 0, -.006, q);
+    const foto = new THREE.Mesh(new THREE.PlaneGeometry(.148, .19), new THREE.MeshStandardMaterial({map:tex, roughness:.55}));
+    foto.position.z = .0005; q.add(foto);
+    const apoio = osso(moldura, V(0, .07, -.01), V(0, -.105, -.07), .006, .006, q, 6); apoio.castShadow = false;
+  }
+
   function montar(){
     P = escuro ? PAL.escuro : PAL.claro;
     cafe = null; lanche = null; botaoCafe(false, "Pedir café");
@@ -918,6 +947,7 @@ export function iniciar(raiz) {
     /* gente */
     PESSOAS.forEach((_, i) => fazPessoa(i));
     PESSOAS.forEach((p, i) => { if(p.acumulador) bagunca(i); });
+    PESSOAS.forEach((p, i) => { if(p.retrato) portaRetrato(i, p.retrato); });
     carrinho = fazCarrinho(); carrinho.position.set(4.95, 0, 1.55); scene.add(carrinho);
 
     /* anel de seleção + etiqueta */
