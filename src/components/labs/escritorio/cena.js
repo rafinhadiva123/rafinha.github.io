@@ -1169,9 +1169,6 @@ export function iniciar(raiz) {
     quadroBranco(pN, 0, .4);
     portaSaida(paredes[2].m);
 
-    /* pilar */
-    caixa(.5, 3, .5, MAT.teto, -4.6, 1.5, -.3);
-
     /* luminárias */
     tetoGrupo = new THREE.Group(); scene.add(tetoGrupo); luzes.pontos = [];
     [-2.2, .6, 2.9].forEach(z => {
