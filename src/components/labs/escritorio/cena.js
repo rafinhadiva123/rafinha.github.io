@@ -165,6 +165,15 @@ export function iniciar(raiz) {
     if(p.cabelo === "careca"){
       const coroa = new THREE.Mesh(new THREE.SphereGeometry(.144, 20, 14, Math.PI * .86, Math.PI * 1.28, .92, .62), mcab);
       coroa.position.set(0, 1.455, .03); coroa.scale.set(1, 1.1, 1.04); c.add(coroa);
+    }else if(p.cabelo === "calvoFrente"){
+      /* uma calota sem a fatia da frente: cabelo na nuca, nas laterais e no alto
+         de trás; a calvície abre na testa e afina até o cocuruto */
+      const calva = Math.PI * .55, mDupla = mcab.clone(); mDupla.side = THREE.DoubleSide;   /* esconde o vão na borda */
+      const capa = new THREE.Mesh(new THREE.SphereGeometry(.148, 24, 16, Math.PI / 2 + calva / 2, Math.PI * 2 - calva, 0, 1.62), mDupla);
+      capa.position.set(0, 1.455, .028); capa.scale.set(1.01, 1.1, 1.05); capa.rotation.x = -.12;
+      capa.castShadow = true; c.add(capa);
+      const nuca = new THREE.Mesh(new THREE.SphereGeometry(.15, 18, 14, Math.PI, Math.PI, 1.2, .9), mcab);
+      nuca.position.set(0, 1.45, .028); nuca.scale.set(1.01, 1.1, 1.05); c.add(nuca);
     }else{
       const alt = (p.cabelo === "curto" || p.cabelo === "topete") ? 1.3 : p.cabelo === "baguncado" ? 1.4 : 1.46;
       const capa = new THREE.Mesh(new THREE.SphereGeometry(.148, 20, 16, 0, Math.PI * 2, 0, alt), mcab);

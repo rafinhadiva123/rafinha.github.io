@@ -2,7 +2,7 @@
 // 01-05 Mesa 1 lado A · 06-10 Mesa 1 lado B (de frente) · 11-15 Mesa 2
 // status: mesa | call | cafe | reuniao | home
 // sanduiche: come um sanduíche quando alguém clica nela
-// cabelo: careca | curto | medio | longo | coque | chanel | topete | baguncado
+// cabelo: careca | calvoFrente | curto | medio | longo | coque | chanel | topete | baguncado
 
 export const PESSOAS = [
   /* --- MESA 1 · LADO A --- */
@@ -15,7 +15,7 @@ export const PESSOAS = [
   /* --- MESA 1 · LADO B (de frente para o lado A) --- */
   {nome:"João",                cargo:"", status:"mesa", agora:"Na mesa.", pele:"#EDC9A9", cabelo:"curto",  cor:"#3B2A1D", camisa:"#6D7B8C", barba:"cheia", oculos:"normal"},
   {nome:"Higuinho",            cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F0CFB2", cabelo:"curto",  cor:"#1E1712", camisa:"#B08A3E", oculos:"normal"},
-  {nome:"Erik",                cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F1D1B6", cabelo:"careca", cor:"#CDAA6E", camisa:"#2C3E50"},
+  {nome:"Erik",                cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F1D1B6", cabelo:"calvoFrente", cor:"#CDAA6E", camisa:"#2C3E50"},
   {nome:"Wendel",              cargo:"", status:"mesa", agora:"Na mesa.", pele:"#E9C4A2", cabelo:"curto",  cor:"#2B1E15", camisa:"#C4633F"},
   {nome:"Elton",               cargo:"", status:"mesa", agora:"Na mesa. Ou em algum lugar atrás da pilha de papel.", acumulador:true, pele:"#EFCCAE", cabelo:"curto",  cor:"#3E2B1D", camisa:"#4A5A6E"},
 
