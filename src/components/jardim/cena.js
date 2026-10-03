@@ -8,9 +8,10 @@ import * as THREE from 'three'
 const VOO = {
   'simulador-de-farofa': { pos: [-2.6, 1.6, 2.4, 1.7, 1.2, .3], kind: 'monarch', tag: 'Farofa' },
   'simulador-de-escritorio': { pos: [-.4, -2.6, 2.6, 1.5, 1.7, .28], kind: 'morpho', tag: 'Escritório' },
-  'atelie-de-notas': { pos: [3.3, .3, 2.2, 1.8, 1.1, .32], kind: 'lilac', tag: 'Perfumista' }
+  'atelie-de-notas': { pos: [3.3, .3, 2.2, 1.8, 1.1, .32], kind: 'lilac', tag: 'Perfumista' },
+  'que-palmeira-e-voce': { pos: [1.2, 3.8, 2.3, 1.5, 1.4, .3], kind: 'green', tag: 'Palmeira' }
 };
-const ESPECIES = ['swallow', 'painted', 'monarch', 'morpho', 'lilac'];
+const ESPECIES = ['swallow', 'painted', 'monarch', 'morpho', 'lilac', 'green'];
 
 export function iniciar(experimentos) {
   var boot = document.getElementById('boot');
@@ -485,7 +486,8 @@ export function iniciar(experimentos) {
       swallow:  { a: '#ffe14a', b: '#f0b81a', edge: '#161208', dots: '#fff2a8', vein: '#161208' },
       white:    { a: '#ffffff', b: '#e8ecf2', edge: '#8e97a8', dots: '#ffffff', vein: '#9aa3b4' },
       lilac:    { a: '#d9a3f5', b: '#8a4fc0', edge: '#2a1240', dots: '#fbeaff', vein: '#2a1240' },
-      painted:  { a: '#f2a45a', b: '#d8703a', edge: '#33261c', dots: '#fff', vein: '#33261c' }
+      painted:  { a: '#f2a45a', b: '#d8703a', edge: '#33261c', dots: '#fff', vein: '#33261c' },
+      green:    { a: '#9fe36a', b: '#2f9a3c', edge: '#0f2a12', dots: '#eaffd6', vein: '#0f2a12' }
     }[kind];
     function fore() { g.beginPath(); g.moveTo(3, 96); g.bezierCurveTo(24, 8, 130, -6, 252, 28); g.bezierCurveTo(248, 60, 200, 96, 120, 100); g.lineTo(3, 106); g.closePath(); }
     function hind() { g.beginPath(); g.moveTo(3, 104); g.bezierCurveTo(70, 100, 160, 100, 196, 140); g.bezierCurveTo(200, 190, 110, 204, 60, 176); g.bezierCurveTo(30, 154, 6, 130, 3, 118); g.closePath(); }
@@ -500,7 +502,7 @@ export function iniciar(experimentos) {
     });
     return srgb(new THREE.CanvasTexture(c));
   }
-  var wingTex = { monarch: wingTexture('monarch'), morpho: wingTexture('morpho'), swallow: wingTexture('swallow'), white: wingTexture('white'), painted: wingTexture('painted'), lilac: wingTexture('lilac') };
+  var wingTex = { monarch: wingTexture('monarch'), morpho: wingTexture('morpho'), swallow: wingTexture('swallow'), white: wingTexture('white'), painted: wingTexture('painted'), lilac: wingTexture('lilac'), green: wingTexture('green') };
   var wingGeoCache = {};
   function wingGeo(w, h) { var k = w + 'x' + h; if (!wingGeoCache[k]) { var g = new THREE.PlaneGeometry(w, h); g.rotateX(Math.PI / 2); g.translate(w / 2, 0, 0); wingGeoCache[k] = g; } return wingGeoCache[k]; }
   var bodyMat = mat(0x1a1410, { roughness: .8 });
