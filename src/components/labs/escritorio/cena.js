@@ -159,7 +159,6 @@ export function iniciar(raiz) {
     bola(pele, 0, 1.434, .146, .026, c, [.78, 1.1, .95]);
     const boca = caixa(.054, .013, .014, mat(p.barba ? "#6E4038" : "#9A6257", .6), 0, 1.386, p.barba === "cheia" ? .168 : .156, c);
     boca.castShadow = false;
-    const bocaRef = boca;
     bola(pele, 0, 1.374, .1, .047, c, p.mulher ? [1.1, .72, .78] : [1.45, .82, .86]);
 
     /* cabelo */
@@ -236,7 +235,7 @@ export function iniciar(raiz) {
     /* tudo que é cabeça vai para um grupo com pivô no pescoço */
     const cabG = new THREE.Group(); cabG.position.set(0, 1.33, .03); c.add(cabG);
     [...c.children].forEach(o => { if(o !== cabG && o.position.y > 1.335) cabG.attach(o); });
-    if(RIG[i]){ RIG[i].cab = cabG; RIG[i].boca = bocaRef; }
+    if(RIG[i]){ RIG[i].cab = cabG; RIG[i].boca = boca; }
 
     /* headset */
     if(p.fone){
