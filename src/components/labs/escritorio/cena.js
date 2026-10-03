@@ -235,7 +235,7 @@ export function iniciar(raiz) {
     /* tudo que é cabeça vai para um grupo com pivô no pescoço */
     const cabG = new THREE.Group(); cabG.position.set(0, 1.33, .03); c.add(cabG);
     [...c.children].forEach(o => { if(o !== cabG && o.position.y > 1.335) cabG.attach(o); });
-    if(RIG[i]) RIG[i].cab = cabG;
+    if(RIG[i]){ RIG[i].cab = cabG; RIG[i].boca = boca; }
 
     /* headset */
     if(p.fone){
@@ -555,7 +555,7 @@ export function iniciar(raiz) {
           r.c.attach(x); x.position.copy(st.D); x.rotation.set(0, 0, 0);
         }
       }
-      if(st.fase === "mesa" && t - st.tm > st.espera){ st.fase = "beber"; st.tb = t; }
+      if(st.fase === "mesa" && t - st.tm > st.espera && !(lanche && lanche.i === st.i)){ st.fase = "beber"; st.tb = t; }
 
       if(st.fase === "beber"){
         const b = t - st.tb, s = r.s;
@@ -592,6 +592,63 @@ export function iniciar(raiz) {
     });
 
     if(terminou && cafe.rodando){ cafe.rodando = false; botaoCafe(false, "Pedir mais café"); }
+  }
+
+  /* ================= sanduíche (clicar em quem tem `sanduiche`) ================= */
+  let lanche = null;
+  const LANCHE_COMP = .09;
+  function fazSanduiche(){
+    /* segurado de lado, pivô na mão; a fatia se estende para -z, em direção à boca */
+    const g = new THREE.Group(), corpo = new THREE.Group();
+    const camada = (cor, l, a, y, rough) => { const m = caixa(l, a, LANCHE_COMP, mat(cor, rough || .7), 0, y, -LANCHE_COMP / 2, corpo); m.castShadow = false; return m; };
+    camada("#D9A86A", .15, .018, -.024, .85);
+    camada("#E9B84A", .158, .006, -.012, .5);          /* queijo */
+    camada("#D98A8A", .154, .01, -.004, .6);           /* presunto */
+    camada("#6FA84A", .164, .006, .006, .7);           /* alface */
+    camada("#F1DFB8", .15, .004, .011, .9);
+    camada("#D9A86A", .15, .018, .022, .85);
+    g.add(corpo); g.userData = {corpo};
+    return g;
+  }
+  function comerSanduiche(i){
+    const r = RIG[i];
+    if(!r || (lanche && lanche.i === i)) return;
+    /* não disputa o braço com o café */
+    if(cafe && cafe.pessoas.some(st => st.i === i && st.fase === "beber")) return;
+    const s = fazSanduiche(); s.scale.setScalar(.001); r.c.add(s);
+    lanche = {i, t0:performance.now() / 1000, s};
+  }
+  function atualizarLanche(t){
+    const L = lanche, r = RIG[L.i], b = t - L.t0, s = r.s;
+    const MORDIDAS = 4, CICLO = .85, INI = .55, FIM = INI + MORDIDAS * CICLO;
+    /* quanto do sanduíche ainda existe (1 → 0), caindo a cada mordida */
+    const feitas = Math.max(0, Math.min(MORDIDAS, (b - INI) / CICLO));
+    const inteiras = Math.floor(feitas), fr = feitas - inteiras;
+    const resto = 1 - (inteiras + suaviza((fr - .4) / .15)) / MORDIDAS;
+    /* mão fica onde a ponta do sanduíche encosta na boca, recua entre mordidas */
+    const recuo = b < INI || b >= FIM ? .05 : .05 * (1 - Math.sin(Math.min(1, fr / .55) * Math.PI));
+    const boca = V(s * .02, 1.37, .185 + LANCHE_COMP * Math.max(resto, .15) + recuo);
+    let alvo, aparece = 1;
+    if(b < INI){ const k = suaviza(b / INI); alvo = new THREE.Vector3().lerpVectors(r.T0, boca, k); aparece = k; }
+    else if(b < FIM){ alvo = boca; }
+    else if(b < FIM + .5){ alvo = new THREE.Vector3().lerpVectors(boca, r.T0, suaviza((b - FIM) / .5)); }
+    else {
+      L.s.parent && L.s.parent.remove(L.s); lanche = null;
+      ik(r, r.T0); r.cabCafe = 0; if(r.boca) r.boca.scale.y = 1;
+      if(!disco && r.cab) r.cab.rotation.x = 0;
+      return;
+    }
+    const punho = ik(r, alvo);
+    L.s.position.set(punho.x - s * .02, punho.y + .03, punho.z - .01);
+    L.s.scale.set(aparece, aparece, aparece);
+    L.s.userData.corpo.scale.z = Math.max(.001, resto);
+    L.s.visible = resto > .001;
+    /* mastiga: boca abre e fecha, cabeça acompanha de leve */
+    const mastigando = b > INI && b < FIM + .5;
+    const mast = mastigando ? Math.abs(Math.sin(b * 11)) : 0;
+    if(r.boca) r.boca.scale.y = 1 + mast * 1.8;
+    r.cabCafe = mastigando ? .06 + mast * .04 : 0;
+    if(!disco && r.cab) r.cab.rotation.x = r.cabCafe;
   }
 
   /* ================= discoteca ================= */
@@ -787,7 +844,7 @@ export function iniciar(raiz) {
 
   function montar(){
     P = escuro ? PAL.escuro : PAL.claro;
-    cafe = null; botaoCafe(false, "Pedir café");
+    cafe = null; lanche = null; botaoCafe(false, "Pedir café");
     scene = new THREE.Scene();
     scene.background = new THREE.Color(P.bg);
     scene.fog = new THREE.Fog(P.nevoa, 18, 42);
@@ -974,6 +1031,7 @@ export function iniciar(raiz) {
     if(anim) anim(performance.now());
     const agora = performance.now() / 1000;
     if(cafe) atualizarCafe(agora);
+    if(lanche) atualizarLanche(agora);
     atualizarDisco(agora);
     posCamera();
     if(tetoGrupo) tetoGrupo.visible = camera.position.y < 2.95;
@@ -1009,7 +1067,11 @@ export function iniciar(raiz) {
                                  -((e.clientY - r.top) / r.height) * 2 + 1);
       raycaster.setFromCamera(v, camera);
       const hit = raycaster.intersectObjects(alvos, false)[0];
-      if(hit && hit.object.userData.i !== undefined) selecionar(hit.object.userData.i);
+      if(hit && hit.object.userData.i !== undefined){
+        const i = hit.object.userData.i;
+        selecionar(i);
+        if(PESSOAS[i].sanduiche) comerSanduiche(i);
+      }
     }
   }
   palco.addEventListener("pointerup", soltar);

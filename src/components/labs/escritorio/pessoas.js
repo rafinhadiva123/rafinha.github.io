@@ -1,6 +1,7 @@
 // Os 15 lugares do escritório e onde cada um senta, em metros.
 // 01-05 Mesa 1 lado A · 06-10 Mesa 1 lado B (de frente) · 11-15 Mesa 2
 // status: mesa | call | cafe | reuniao | home
+// sanduiche: come um sanduíche quando alguém clica nela
 // cabelo: careca | curto | medio | longo | coque | chanel | topete | baguncado
 
 export const PESSOAS = [
@@ -23,7 +24,7 @@ export const PESSOAS = [
   {nome:"Sem sangue",          cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F7E4D5", cabelo:"baguncado", cor:"#121010", camisa:"#B5B1A8", oculos:"redondo"},
   {nome:"Rafa",                cargo:"Analista de Dados · RH", status:"mesa", agora:"Desenhando um simulador do próprio escritório.",
                                pele:"#F1D2B8", cabelo:"medio",  cor:"#3A2517", camisa:"#2F6F5E", altura:.9, laco:"#E98AB0", mulher:true},
-  {nome:"Lika",                cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F2D6BC", cabelo:"coque",  cor:"#120E0C", camisa:"#8E5B7A", olhos:"puxados", mulher:true},
+  {nome:"Lika",                cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F2D6BC", cabelo:"coque",  cor:"#120E0C", camisa:"#8E5B7A", olhos:"puxados", mulher:true, sanduiche:true},
   {nome:"Jana",                cargo:"", status:"mesa", agora:"Na mesa.", pele:"#F0D0B4", cabelo:"chanel", cor:"#141112", camisa:"#3D5C46", mulher:true}
 ];
 export const N = PESSOAS.length;
