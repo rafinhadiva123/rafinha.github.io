@@ -405,18 +405,27 @@ export function iniciar(raiz) {
     const g = new THREE.Group(); g.position.set(xParede - P / 2, 0, zc); scene.add(g);
     const aco = mat("#B9BDC1", .45, .35), porta = mat("#C7CBCF", .4, .35), escuro = mat("#2B2E33", .5, .4);
 
-    caixa(P, A, L, aco, 0, A / 2 + .04, 0, g);                               /* corpo */
+    /* corpo oco: fundo, laterais, teto e chão (por dentro é escuro) */
+    const dentro = mat("#4A4E54", .7, .2), e = .02;
+    caixa(e, A, L, aco, P / 2 - e / 2, A / 2 + .04, 0, g);
+    [-1, 1].forEach(s => caixa(P, A, e, aco, 0, A / 2 + .04, s * (L / 2 - e / 2), g));
+    caixa(P, e, L, aco, 0, A + .04 - e / 2, 0, g); caixa(P, e, L, aco, 0, .04 + e / 2, 0, g);
+    caixa(.004, A - .06, L - .06, dentro, P / 2 - e - .002, A / 2 + .04, 0, g);
     [[-.2, -.44], [-.2, .44], [.2, -.44], [.2, .44]].forEach(([dx, dz]) =>
       caixa(.05, .04, .05, escuro, dx, .02, dz, g));                          /* pezinhos */
-    /* duas portas com fresta no meio */
+    /* duas portas com fresta no meio, cada uma num pivô na dobradiça */
+    const portas = [];
     [-1, 1].forEach(s => {
-      const d = caixa(.02, A - .3, L / 2 - .025, porta, -P / 2 - .01, (A - .3) / 2 + .1, s * (L / 4 + .006), g);
+      const W = L / 2 - .025, zH = s * (L / 2 - .0065);
+      const pv = new THREE.Group(); pv.position.set(-P / 2 - .01, 0, zH); g.add(pv);
+      const d = caixa(.02, A - .3, W, porta, 0, (A - .3) / 2 + .1, -s * W / 2, pv);
       d.receiveShadow = true;
-      caixa(.03, .2, .025, escuro, -P / 2 - .035, 1.02, s * .045, g);          /* puxador */
+      caixa(.03, .2, .025, escuro, -.025, 1.02, s * .045 - zH, pv);            /* puxador */
       [.35, 1.55].forEach(y => caixa(.012, .06, .03, escuro, -P / 2 - .012, y, s * (L / 2 - .03), g)); /* dobradiças */
+      portas.push({pv, s});
     });
     const tranca = new THREE.Mesh(new THREE.CylinderGeometry(.016, .016, .02, 12), mat("#D4B45A", .3, .8));
-    tranca.rotation.z = Math.PI / 2; tranca.position.set(-P / 2 - .03, 1.2, .0); g.add(tranca);
+    tranca.rotation.z = Math.PI / 2; tranca.position.set(-.02, 1.2, -.006 - portas[1].pv.position.z); portas[1].pv.add(tranca);
 
     /* plaqueta no alto: ARMÁRIO DO JURÍDICO */
     const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 150;
@@ -433,6 +442,8 @@ export function iniciar(raiz) {
     placa.rotation.y = -Math.PI / 2; placa.position.set(-P / 2 - .004, A - .06, 0); g.add(placa);
     if(document.fonts && document.fonts.load)
       document.fonts.load('700 76px Archivo').then(() => { pintar(); tex.needsUpdate = true; }).catch(() => {});
+    g.traverse(o => { if(o.isMesh){ o.userData.armario = true; alvos.push(o); } });
+    armario = {g, portas, abre:0};
   }
 
   /* ================= café para todo mundo ================= */
@@ -516,7 +527,7 @@ export function iniciar(raiz) {
     /* limpa a rodada anterior */
     if(cafe) cafe.pessoas.forEach(st => { st.xicara.parent && st.xicara.parent.remove(st.xicara); resetarPose(st.i); });
     const t = performance.now() / 1000;
-    const ordem = PESSOAS.map((_, i) => i).sort((a, b) => LUGAR[a].x - LUGAR[b].x || LUGAR[a].z - LUGAR[b].z);
+    const ordem = PESSOAS.map((_, i) => i).filter(i => !sumiram.has(i)).sort((a, b) => LUGAR[a].x - LUGAR[b].x || LUGAR[a].z - LUGAR[b].z);
     cafe = {t0:t, rodando:true, pessoas:ordem.map(i => {
       const L = LUGAR[i], r = RIG[i];
       r.g.updateMatrixWorld(true);
@@ -658,6 +669,247 @@ export function iniciar(raiz) {
     if(r.boca) r.boca.scale.y = 1 + mast * 1.8;
     r.cabCafe = mastigando ? .06 + mast * .04 : 0;
     if(!disco && r.cab) r.cab.rotation.x = r.cabCafe;
+  }
+
+  /* ================= armário do jurídico: o esqueleto foge ================= */
+  /* clicar no armário: sai um homem correndo com o esqueleto debaixo do braço, pelo
+     corredor, até a porta da parede oeste. Quem tem `perseguidor` sai atrás na primeira
+     vez e não volta mais: `sumiram` fica fora do montar(), só a recarga traz de volta. */
+  let armario = null, saida = null, fuga = null, ultFuga = 0;
+  const sumiram = new Set();
+  const ROTA_FUGA = [[5.78, 1.15], [4.3, 1.05], [3.4, 1.45], [-5.5, 1.45], [-7.4, 1.45]];
+  const rotaPerseguidor = L => [[L.x, L.z], [L.x - .4, 1.6], [-5.5, 1.45], [-7.4, 1.45]];
+
+  function portaSaida(parede){
+    /* no referencial da parede oeste: x = .072 é a face de dentro, y = -1.5 é o chão */
+    const x0 = .072, y0 = -1.5, zc = 1.45;
+    const vao = new THREE.Mesh(new THREE.PlaneGeometry(.9, 2.05), new THREE.MeshBasicMaterial({color:0x121417}));
+    vao.rotation.y = Math.PI / 2; vao.position.set(x0 + .001, y0 + 1.025, zc); parede.add(vao);
+    const batente = mat("#3B3F44", .6);
+    caixa(.03, .06, 1.02, batente, x0 + .015, y0 + 2.08, zc, parede);
+    [-1, 1].forEach(s => caixa(.03, 2.11, .06, batente, x0 + .015, y0 + 1.055, zc + s * .48, parede));
+    /* pivô na dobradiça do lado +z: abre para dentro da sala sem cruzar o corredor */
+    const pv = new THREE.Group(); pv.position.set(x0 + .03, y0, zc + .45); parede.add(pv);
+    caixa(.04, 2.03, .88, mat("#8C6A48", .7), 0, 1.025, -.45, pv);
+    caixa(.05, .03, .12, mat("#C9CCCF", .3, .7), .045, 1.0, -.8, pv);
+    saida = {pv, abre:0};
+  }
+
+  function fazCorredor(o){
+    const g = new THREE.Group(), corpo = new THREE.Group();
+    corpo.scale.setScalar(o.esc || .86); g.add(corpo);
+    const gordo = !!o.gordo;
+    const pele = mat(o.pele, .72), camisa = mat(o.camisa, .88), calca = mat(o.calca || "#3A3F47", .92);
+    const camisa2 = mat(new THREE.Color(o.camisa).multiplyScalar(.82).getStyle(), .88), sapato = mat("#24262A", .6, .1);
+    bola(calca, 0, .93, 0, gordo ? .27 : .19, corpo, [1.15, .62, .85]);
+    /* Q: quadril (balança e inclina); U: tronco montado nas mesmas medidas de quem senta */
+    const Q = new THREE.Group(); Q.position.y = .95; corpo.add(Q);
+    const U = new THREE.Group(); U.position.y = -.5; Q.add(U);
+    const tr = tronco(camisa, U);
+    if(gordo){ tr.scale.set(1.3, 1, .68 * 1.35); bola(camisa, 0, .8, .1, .3, U, [1.12, 1, 1.05]); }
+    const gola = new THREE.Mesh(new THREE.CylinderGeometry(.115, .155, .09, 18), camisa2);
+    gola.position.set(0, 1.27, .02); gola.scale.z = .74; U.add(gola);
+    osso(pele, V(0, 1.24, .02), V(0, 1.37, .025), .072, .078, U, 14);
+    o.cabeca(U).position.set(0, 1.33, .03);
+    const bracos = [-1, 1].map(s => {
+      const om = new THREE.Group(); om.position.set(s * (gordo ? .31 : .238), 1.155, .02); U.add(om);
+      bola(camisa, 0, 0, 0, .088, om);
+      osso(camisa, V(0, 0, 0), V(0, -.27, 0), .075, .066, om);
+      const co = new THREE.Group(); co.position.y = -.27; om.add(co);
+      bola(camisa2, 0, 0, 0, .066, co);
+      osso(pele, V(0, 0, 0), V(0, -.25, 0), .062, .05, co);
+      bola(pele, 0, -.28, 0, .062, co, [.85, 1.25, .6]);
+      return {om, co, s};
+    });
+    const pernas = [-1, 1].map(s => {
+      const cx = new THREE.Group(); cx.position.set(s * (gordo ? .15 : .115), .95, 0); corpo.add(cx);
+      osso(calca, V(0, 0, 0), V(0, -.46, 0), gordo ? .135 : .105, gordo ? .11 : .09, cx);
+      const jo = new THREE.Group(); jo.position.y = -.46; cx.add(jo);
+      bola(calca, 0, 0, 0, gordo ? .11 : .09, jo);
+      osso(calca, V(0, 0, 0), V(0, -.43, 0), gordo ? .1 : .085, .07, jo);
+      caixa(.13, .08, .28, sapato, 0, -.46, .07, jo);
+      return {cx, jo};
+    });
+    return {g, corpo, Q, U, bracos, pernas};
+  }
+
+  /* um passo a cada π de fase: coxa vai e volta, joelho dobra na volta, braço oposto */
+  function correr(c, f){
+    c.pernas.forEach((p, k) => {
+      const ph = f + k * Math.PI;
+      p.cx.rotation.x = -.8 * Math.sin(ph);
+      p.jo.rotation.x = .25 + 1.1 * Math.max(0, Math.cos(ph));
+    });
+    c.bracos.forEach(b => {
+      if(b.preso) return;
+      b.om.rotation.x = .75 * Math.sin(f + (b.s < 0 ? 0 : Math.PI)); b.co.rotation.x = -1.35;
+    });
+    c.Q.position.y = .95 + .04 * Math.abs(Math.cos(f));
+    c.Q.rotation.x = .2;
+  }
+
+  function cabecaGordo(U){
+    const H = new THREE.Group(); U.add(H);
+    const pele = mat("#E9B99A", .7), cab = mat("#3E2C20", .95);
+    bola(pele, 0, .125, 0, .145, H, [1.06, 1.06, 1.03]);
+    [-1, 1].forEach(s => bola(pele, s * .145, .12, -.01, .036, H, [.5, 1.15, .9]));
+    bola(pele, 0, .035, .06, .11, H, [1.2, .6, .95]);                         /* papada */
+    const mOlho = mat("#F6F3EE", .35), mIris = mat("#2A211B", .3);
+    [-.05, .05].forEach(dx => {
+      bola(mOlho, dx, .15, .126, .024, H, [1, .9, .6]); bola(mIris, dx, .15, .143, .013, H);
+      const sob = caixa(.052, .014, .016, cab, dx, .19, .134, H); sob.rotation.z = dx > 0 ? -.25 : .25;
+    });
+    bola(pele, 0, .11, .152, .03, H);                                         /* nariz */
+    caixa(.05, .028, .014, mat("#5A2A26", .6), 0, .048, .142, H);            /* boca aberta, ofegante */
+    /* cabelo curto cheio */
+    const capa = new THREE.Mesh(new THREE.SphereGeometry(.156, 20, 16, 0, Math.PI * 2, 0, 1.3), cab);
+    capa.position.set(0, .125, -.002); capa.scale.set(1.05, 1.08, 1.06); capa.rotation.x = -.22; H.add(capa);
+    const nuca = new THREE.Mesh(new THREE.SphereGeometry(.158, 18, 14, Math.PI, Math.PI, .25, 1.45), cab);
+    nuca.position.set(0, .12, -.002); nuca.scale.set(1.05, 1.08, 1.06); H.add(nuca);
+    return H;
+  }
+
+  function fazEsqueleto(){
+    const m = mat("#ECE6D6", .65), oco = mat("#2A2522", .9), dente = mat("#FFFFFF", .4);
+    const g = new THREE.Group();
+    bola(m, 0, 0, 0, .12, g, [1.3, .6, .75]);                                 /* bacia */
+    for(let k = 0; k < 9; k++) bola(m, 0, .07 + k * .055, -.03, .024, g);   /* coluna */
+    for(let k = 0; k < 5; k++){                                               /* costelas */
+      const r = new THREE.Mesh(new THREE.TorusGeometry(.125 - k * .01, .011, 6, 18), m);
+      r.rotation.x = Math.PI / 2; r.scale.set(1, .72, 1); r.position.set(0, .24 + k * .055, 0); g.add(r);
+    }
+    caixa(.03, .2, .02, m, 0, .36, .085, g);                                  /* esterno */
+    osso(m, V(-.17, .52, 0), V(.17, .52, 0), .014, .014, g, 6);              /* clavículas */
+    osso(m, V(0, .5, -.02), V(0, .62, 0), .02, .02, g, 6);
+    const cr = new THREE.Group(); cr.position.set(0, .6, 0); g.add(cr);
+    bola(m, 0, .11, 0, .11, cr, [.92, 1.05, 1.08]);
+    [-.04, .04].forEach(dx => bola(oco, dx, .115, .088, .028, cr, [1, 1, .5]));
+    bola(oco, 0, .072, .104, .014, cr);
+    caixa(.08, .014, .01, dente, 0, .046, .1, cr);
+    const mand = new THREE.Group(); mand.position.set(0, .04, 0); cr.add(mand);
+    caixa(.1, .03, .1, m, 0, -.016, .045, mand);
+    caixa(.08, .014, .01, dente, 0, .002, .092, mand);
+    const bracos = [-1, 1].map(s => {
+      const b = new THREE.Group(); b.position.set(s * .18, .5, 0); g.add(b);
+      osso(m, V(0, 0, 0), V(0, -.29, 0), .017, .014, b, 6);
+      const a = new THREE.Group(); a.position.y = -.29; b.add(a);
+      bola(m, 0, 0, 0, .022, a);
+      osso(m, V(0, 0, 0), V(0, -.26, 0), .014, .012, a, 6);
+      bola(m, 0, -.29, 0, .035, a, [1, 1.3, .5]);
+      return {b, a};
+    });
+    const pernas = [-1, 1].map(s => {
+      const p = new THREE.Group(); p.position.set(s * .09, -.03, 0); g.add(p);
+      osso(m, V(0, 0, 0), V(0, -.42, 0), .022, .018, p, 6);
+      const j = new THREE.Group(); j.position.y = -.42; p.add(j);
+      bola(m, 0, 0, 0, .03, j);
+      osso(m, V(0, 0, 0), V(0, -.4, 0), .018, .015, j, 6);
+      caixa(.06, .03, .15, m, 0, -.41, .05, j);
+      return {p, j};
+    });
+    return {g, cr, mand, bracos, pernas};
+  }
+
+  /* esqueleto deitado debaixo do braço esquerdo: crânio para a frente, pernas para trás,
+     braços pendurados para o chão (que no referencial dele é +x) */
+  function carregarEsqueleto(c){
+    const e = fazEsqueleto();
+    const K = new THREE.Group(); K.position.set(-.52, .98, .06); K.rotation.x = Math.PI / 2; c.U.add(K);
+    e.g.rotation.y = -Math.PI / 2; e.g.position.y = -.3; e.g.scale.setScalar(.8); K.add(e.g);
+    const b = c.bracos[0]; b.preso = true;
+    b.om.rotation.set(-.15, 0, -.32); b.co.rotation.x = -1.1;
+    return e;
+  }
+  function balancarEsqueleto(e, f, t){
+    e.bracos.forEach((b, k) => {
+      b.b.rotation.z = Math.PI / 2 + .35 * Math.sin(f + k * 1.7);
+      b.a.rotation.z = .4 * Math.sin(f * 1.3 + k);
+    });
+    e.pernas.forEach((p, k) => {
+      p.p.rotation.z = .75 + .3 * Math.sin(f + k * Math.PI);
+      p.j.rotation.x = .3 * Math.sin(f * 1.1 + k);
+    });
+    e.cr.rotation.z = .25 * Math.sin(f * .9);
+    e.mand.rotation.x = .2 + .2 * Math.sin(t * 24);                          /* bate os dentes */
+  }
+
+  function fazRota(pts){
+    const seg = []; let tot = 0;
+    for(let k = 1; k < pts.length; k++){
+      const [ax, az] = pts[k - 1], [bx, bz] = pts[k], l = Math.hypot(bx - ax, bz - az);
+      seg.push({ax, az, bx, bz, l, d0:tot}); tot += l;
+    }
+    return {seg, tot};
+  }
+  function naRota(r, d){
+    const s = r.seg.find(s => d <= s.d0 + s.l) || r.seg[r.seg.length - 1];
+    const k = Math.min(1, (d - s.d0) / s.l);
+    return {x:s.ax + (s.bx - s.ax) * k, z:s.az + (s.bz - s.az) * k, ang:Math.atan2(s.bx - s.ax, s.bz - s.az)};
+  }
+
+  function abrirArmario(){
+    if(!renderer || !armario || fuga) return;
+    const t = performance.now() / 1000;
+    const c = fazCorredor({pele:"#E9B99A", camisa:"#F2F0EA", calca:"#4A4F57", gordo:true, esc:.9, cabeca:cabecaGordo});
+    const esq = carregarEsqueleto(c);
+    c.g.position.set(ROTA_FUGA[0][0], 0, ROTA_FUGA[0][1]);
+    scene.add(c.g);
+    const quem = PESSOAS.findIndex((p, i) => p.perseguidor && !sumiram.has(i));
+    fuga = {t0:t, perseguidor:quem >= 0 ? quem : null, saiu:false,
+            corredores:[{c, esq, rota:fazRota(ROTA_FUGA), vel:2.5, inicio:t + .4}]};
+    voarPara(VISTA_GERAL(), 900);
+  }
+
+  function sairCorrendo(i, t){
+    const p = PESSOAS[i], L = LUGAR[i], r = RIG[i];
+    sumiram.add(i); r.c.visible = false;
+    const cabeca = U => { const h = r.cab.clone(); h.rotation.set(0, 0, 0); U.add(h); return h; };
+    const c = fazCorredor({pele:p.pele, camisa:p.camisa, calca:p.calca, cabeca, esc:.86});
+    c.g.position.set(L.x, 0, L.z); c.g.rotation.y = L.giro;
+    scene.add(c.g);
+    fuga.corredores.push({c, rota:fazRota(rotaPerseguidor(L)), vel:2.9, inicio:t + .35, ang:L.giro, pulo:true});
+  }
+
+  function atualizarFuga(t){
+    const dt = Math.min(.1, t - (ultFuga || t)); ultFuga = t;
+    let pertoDaSaida = false;
+    if(fuga){
+      let acabou = true;
+      fuga.corredores.forEach(r => {
+        if(r.fim) return;
+        acabou = false;
+        const d = Math.max(0, (t - r.inicio) * r.vel), P = naRota(r.rota, d), g = r.c.g;
+        g.position.set(P.x, 0, P.z);
+        if(r.ang === undefined) r.ang = P.ang;
+        if(t >= r.inicio){
+          let da = P.ang - r.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
+          r.ang += da * Math.min(1, dt * 12);
+        }
+        g.rotation.y = r.ang;
+        const f = d * 3.4;
+        if(t >= r.inicio) correr(r.c, f);
+        /* o perseguidor levanta num pulo antes de sair */
+        r.c.corpo.position.y = r.pulo && t < r.inicio ? .22 * Math.sin(Math.PI * (1 - (r.inicio - t) / .35)) : 0;
+        if(r.esq) balancarEsqueleto(r.esq, f, t);
+        if(P.x < -3.4) pertoDaSaida = true;
+        if(d >= r.rota.tot){ r.fim = true; scene.remove(g); }
+      });
+      const g0 = fuga.corredores[0].c.g;
+      if(fuga.perseguidor !== null && !fuga.saiu && g0.position.x < LUGAR[fuga.perseguidor].x + .8){
+        fuga.saiu = true; sairCorrendo(fuga.perseguidor, t); acabou = false;
+      }
+      if(acabou) fuga = null;
+    }
+    if(armario){
+      const alvo = fuga && t - fuga.t0 < 1.5 ? 1 : 0;
+      armario.abre += (alvo - armario.abre) * Math.min(1, dt * (alvo ? 10 : 4));
+      armario.portas.forEach(p => p.pv.rotation.y = p.s * 1.9 * armario.abre);
+    }
+    if(saida){
+      const alvo = pertoDaSaida ? 1 : 0;
+      saida.abre += (alvo - saida.abre) * Math.min(1, dt * (alvo ? 8 : 3));
+      saida.pv.rotation.y = -1.6 * saida.abre;
+    }
   }
 
   /* ================= discoteca ================= */
@@ -882,7 +1134,7 @@ export function iniciar(raiz) {
 
   function montar(){
     P = escuro ? PAL.escuro : PAL.claro;
-    cafe = null; lanche = null; botaoCafe(false, "Pedir café");
+    cafe = null; lanche = null; fuga = null; botaoCafe(false, "Pedir café");
     scene = new THREE.Scene();
     scene.background = new THREE.Color(P.bg);
     scene.fog = new THREE.Fog(P.nevoa, 18, 42);
@@ -915,6 +1167,7 @@ export function iniciar(raiz) {
     /* o que está pendurado some junto com a parede */
     const tv = caixa(.09, 1.45, 2.55, MAT.tv, -.1, .32, -1, pL); tv.castShadow = false;
     quadroBranco(pN, 0, .4);
+    portaSaida(paredes[2].m);
 
     /* pilar */
     caixa(.5, 3, .5, MAT.teto, -4.6, 1.5, -.3);
@@ -948,6 +1201,7 @@ export function iniciar(raiz) {
     PESSOAS.forEach((_, i) => fazPessoa(i));
     PESSOAS.forEach((p, i) => { if(p.acumulador) bagunca(i); });
     PESSOAS.forEach((p, i) => { if(p.retrato) portaRetrato(i, p.retrato); });
+    sumiram.forEach(i => { if(RIG[i]) RIG[i].c.visible = false; });
     carrinho = fazCarrinho(); carrinho.position.set(4.95, 0, 1.55); scene.add(carrinho);
 
     /* anel de seleção + etiqueta */
@@ -1071,6 +1325,7 @@ export function iniciar(raiz) {
     const agora = performance.now() / 1000;
     if(cafe) atualizarCafe(agora);
     if(lanche) atualizarLanche(agora);
+    atualizarFuga(agora);
     atualizarDisco(agora);
     posCamera();
     if(tetoGrupo) tetoGrupo.visible = camera.position.y < 2.95;
@@ -1106,7 +1361,8 @@ export function iniciar(raiz) {
                                  -((e.clientY - r.top) / r.height) * 2 + 1);
       raycaster.setFromCamera(v, camera);
       const hit = raycaster.intersectObjects(alvos, false)[0];
-      if(hit && hit.object.userData.i !== undefined){
+      if(hit && hit.object.userData.armario) abrirArmario();
+      else if(hit && hit.object.userData.i !== undefined){
         const i = hit.object.userData.i;
         selecionar(i);
         if(PESSOAS[i].sanduiche) comerSanduiche(i);
