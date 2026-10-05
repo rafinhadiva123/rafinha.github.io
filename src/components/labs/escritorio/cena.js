@@ -721,8 +721,8 @@ export function iniciar(raiz) {
 
   /* ================= armário do jurídico: o esqueleto foge ================= */
   /* clicar no armário: sai um homem correndo com o esqueleto debaixo do braço, pelo
-     corredor, até a porta da parede oeste. Quem tem `perseguidor` sai atrás na primeira
-     vez e não volta mais: `sumiram` fica fora do montar(), só a recarga traz de volta. */
+     corredor, até a porta da parede oeste. Quem tem `perseguidor` sai atrás e, quando
+     a fuga acaba, volta para a mesa: dá para repetir a cena sem recarregar. */
   let armario = null, saida = null, fuga = null, ultFuga = 0;
   const sumiram = new Set();
   const ROTA_FUGA = [[5.78, 1.15], [4.3, 1.05], [3.4, 1.45], [-5.5, 1.45], [-7.4, 1.45]];
@@ -918,6 +918,11 @@ export function iniciar(raiz) {
     fuga.corredores.push({c, rota:fazRota(rotaPerseguidor(L)), vel:2.9, inicio:t + .35, ang:L.giro, pulo:true});
   }
 
+  function voltarPerseguidores(){
+    sumiram.forEach(i => { if(RIG[i]) RIG[i].c.visible = true; });
+    sumiram.clear();
+  }
+
   function atualizarFuga(t){
     const dt = Math.min(.1, t - (ultFuga || t)); ultFuga = t;
     let pertoDaSaida = false;
@@ -946,7 +951,7 @@ export function iniciar(raiz) {
       if(fuga.perseguidor !== null && !fuga.saiu && g0.position.x < LUGAR[fuga.perseguidor].x + .8){
         fuga.saiu = true; sairCorrendo(fuga.perseguidor, t); acabou = false;
       }
-      if(acabou) fuga = null;
+      if(acabou){ fuga = null; voltarPerseguidores(); }
     }
     if(armario){
       const alvo = fuga && t - fuga.t0 < 1.5 ? 1 : 0;
@@ -1182,7 +1187,7 @@ export function iniciar(raiz) {
 
   function montar(){
     P = escuro ? PAL.escuro : PAL.claro;
-    cafe = null; lanche = null; filmagem = null; fuga = null; botaoCafe(false, "Pedir café");
+    cafe = null; lanche = null; filmagem = null; fuga = null; sumiram.clear(); botaoCafe(false, "Pedir café");
     scene = new THREE.Scene();
     scene.background = new THREE.Color(P.bg);
     scene.fog = new THREE.Fog(P.nevoa, 18, 42);
