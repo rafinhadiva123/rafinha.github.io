@@ -575,7 +575,7 @@ export function iniciar(raiz) {
           r.c.attach(x); x.position.copy(st.D); x.rotation.set(0, 0, 0);
         }
       }
-      if(st.fase === "mesa" && t - st.tm > st.espera && !(lanche && lanche.i === st.i)){ st.fase = "beber"; st.tb = t; }
+      if(st.fase === "mesa" && t - st.tm > st.espera && !(lanche && lanche.i === st.i) && !(filmagem && filmagem.i === st.i)){ st.fase = "beber"; st.tb = t; }
 
       if(st.fase === "beber"){
         const b = t - st.tb, s = r.s;
@@ -615,8 +615,9 @@ export function iniciar(raiz) {
   }
 
   /* ================= sanduíche (clicar em quem tem `sanduiche`) ================= */
-  let lanche = null;
+  let lanche = null, filmagem = null;
   const LANCHE_COMP = .09;
+  const MORDIDAS = 4, CICLO = .85, INI = .55, FIM = INI + MORDIDAS * CICLO;
   function fazSanduiche(){
     /* segurado de lado, pivô na mão; a fatia se estende para -z, em direção à boca */
     const g = new THREE.Group(), corpo = new THREE.Group();
@@ -637,10 +638,10 @@ export function iniciar(raiz) {
     if(cafe && cafe.pessoas.some(st => st.i === i && st.fase === "beber")) return;
     const s = fazSanduiche(); s.scale.setScalar(.001); r.c.add(s);
     lanche = {i, t0:performance.now() / 1000, s};
+    filmar(lanche.t0);
   }
   function atualizarLanche(t){
     const L = lanche, r = RIG[L.i], b = t - L.t0, s = r.s;
-    const MORDIDAS = 4, CICLO = .85, INI = .55, FIM = INI + MORDIDAS * CICLO;
     /* quanto do sanduíche ainda existe (1 → 0), caindo a cada mordida */
     const feitas = Math.max(0, Math.min(MORDIDAS, (b - INI) / CICLO));
     const inteiras = Math.floor(feitas), fr = feitas - inteiras;
@@ -669,6 +670,53 @@ export function iniciar(raiz) {
     if(r.boca) r.boca.scale.y = 1 + mast * 1.8;
     r.cabCafe = mastigando ? .06 + mast * .04 : 0;
     if(!disco && r.cab) r.cab.rotation.x = r.cabCafe;
+  }
+
+  /* ================= celular: quem tem `filma` grava quem está comendo ================= */
+  function fazCelular(){
+    /* tela para +z (virada para quem segura), câmera atrás */
+    const g = new THREE.Group();
+    caixa(.072, .145, .009, mat("#1C1D21", .35, .3), 0, 0, 0, g).castShadow = false;
+    const tela = new THREE.Mesh(new THREE.PlaneGeometry(.062, .128), new THREE.MeshBasicMaterial({color:0x56738A}));
+    tela.position.z = .0051; g.add(tela);
+    const rec = new THREE.Mesh(new THREE.CircleGeometry(.0055, 14), new THREE.MeshBasicMaterial({color:0xE5322D}));
+    rec.position.set(-.021, .053, .0056); g.add(rec);
+    const lente = new THREE.Mesh(new THREE.CylinderGeometry(.007, .007, .004, 14), mat("#0B0C0E", .2, .5));
+    lente.rotation.x = Math.PI / 2; lente.position.set(-.022, .055, -.0062); g.add(lente);
+    g.userData = {rec};
+    return g;
+  }
+  function filmar(t0){
+    const f = PESSOAS.findIndex(p => p.filma), r = RIG[f];
+    if(!r || !r.c.visible || filmagem) return;
+    /* o braço é o mesmo do café: se estiver no meio do gole, fica sem gravar */
+    if(cafe && cafe.pessoas.some(st => st.i === f && st.fase === "beber")) return;
+    const cel = fazCelular(); cel.visible = false; r.c.add(cel);
+    filmagem = {i:f, t0, cel};
+  }
+  function atualizarFilmagem(t){
+    const F = filmagem, r = RIG[F.i], b = t - F.t0;
+    const SOBE = .15, NO_AR = .65, DESCE = FIM + .1, FIM_F = DESCE + .5;
+    if(b >= FIM_F){
+      F.cel.parent && F.cel.parent.remove(F.cel); filmagem = null;
+      ik(r, r.T0); r.cabCafe = 0;
+      if(r.cab){ r.cab.rotation.y = 0; if(!disco) r.cab.rotation.x = 0; }
+      return;
+    }
+    /* braço de fora, celular na altura do rosto, câmera apontada para o lado */
+    const alto = V(r.s * .3, 1.36, .34);
+    const k = b < SOBE ? 0 : b < NO_AR ? suaviza((b - SOBE) / (NO_AR - SOBE)) : b < DESCE ? 1 : 1 - suaviza((b - DESCE) / (FIM_F - DESCE));
+    const alvo = new THREE.Vector3().lerpVectors(r.T0, alto, k);
+    alvo.y += k * Math.sin(b * 2.3) * .004;
+    const punho = ik(r, alvo);
+    F.cel.visible = k > .02;
+    F.cel.position.set(punho.x, punho.y + .09, punho.z + .01);
+    F.cel.lookAt(r.c.localToWorld(V(0, 1.47, .1)));
+    F.cel.scale.setScalar(1.3 * Math.max(.001, Math.min(1, k * 1.5)));
+    F.cel.userData.rec.visible = k > .9 && (b * 1.6) % 1 < .6;
+    /* olha para a tela, de leve para baixo */
+    r.cabCafe = .1 * k;
+    if(r.cab){ r.cab.rotation.y = r.s * .45 * k; if(!disco) r.cab.rotation.x = r.cabCafe; }
   }
 
   /* ================= armário do jurídico: o esqueleto foge ================= */
@@ -1134,7 +1182,7 @@ export function iniciar(raiz) {
 
   function montar(){
     P = escuro ? PAL.escuro : PAL.claro;
-    cafe = null; lanche = null; fuga = null; botaoCafe(false, "Pedir café");
+    cafe = null; lanche = null; filmagem = null; fuga = null; botaoCafe(false, "Pedir café");
     scene = new THREE.Scene();
     scene.background = new THREE.Color(P.bg);
     scene.fog = new THREE.Fog(P.nevoa, 18, 42);
@@ -1322,6 +1370,7 @@ export function iniciar(raiz) {
     const agora = performance.now() / 1000;
     if(cafe) atualizarCafe(agora);
     if(lanche) atualizarLanche(agora);
+    if(filmagem) atualizarFilmagem(agora);
     atualizarFuga(agora);
     atualizarDisco(agora);
     posCamera();
