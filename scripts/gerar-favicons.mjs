@@ -1,7 +1,7 @@
 // Gera favicon.ico, favicon-16/32.png, apple-touch-icon.png e icon-192/512.png
-// a partir de icone.png (na raiz do repositório) e escreve tudo em public/.
+// a partir de scripts/icone.png e escreve tudo em public/.
 //
-// Não entra no build — é rodado manualmente quando icone.png muda:
+// Não entra no build — é rodado manualmente quando scripts/icone.png muda:
 //   node scripts/gerar-favicons.mjs
 
 import { readFile, writeFile } from 'node:fs/promises'
@@ -11,7 +11,7 @@ import sharp from 'sharp'
 import pngToIco from 'png-to-ico'
 
 const raiz = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
-const origem = path.join(raiz, 'icone.png')
+const origem = path.join(raiz, 'scripts', 'icone.png')
 const publicDir = path.join(raiz, 'public')
 
 // Recorte amplo: quadrado 948×948 a partir de (46, 0) — o coelho inteiro,
