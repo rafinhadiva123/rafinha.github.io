@@ -1,6 +1,7 @@
 ---
 /**
- * Simulador de Escritório: a sala em 3D (three.js). Sem React — a cena é
+ * Simulador de Escritório: a sala em 3D (three.js), com cadeiras vazias que
+ * qualquer visitante ocupa montando um personagem. Sem React — a cena é
  * imperativa do começo ao fim, então fica num <script> que o Astro empacota
  * só pra esta página. As fontes vêm do próprio site (fontsource), nada de CDN.
  */
@@ -22,12 +23,18 @@ import '@fontsource/archivo/700.css'
       <button type="button" id="cam-orbita">Reenquadrar</button>
       <button type="button" id="cam-topo">Ver de cima</button>
     </div>
-    <div class="hud" id="hud">arraste para girar · scroll para aproximar</div>
+    <div class="hud" id="hud">clique num <b>+</b> para sentar · arraste para girar · scroll para aproximar</div>
+    <p class="aviso" id="aviso" role="status" hidden></p>
+    <div class="editor" id="editor" hidden></div>
   </div>
 
-  <nav class="navmesas" aria-label="Navegar pelas mesas">
-    <button class="seta" id="ant" type="button">←<span id="ant-nome"></span></button>
-    <button class="seta" id="prox" type="button"><span id="prox-nome"></span>→</button>
+  <nav class="navmesas" aria-label="Navegar pelas cadeiras">
+    <button class="seta" id="ant" type="button" aria-label="Cadeira anterior">←<span id="ant-nome"></span></button>
+    <p class="lotacao">
+      <span id="lotacao">Carregando o escritório…</span>
+      <span class="modo-teste" id="modo-teste" hidden title="O Supabase ainda não foi configurado: os personagens ficam só neste navegador.">modo de teste</span>
+    </p>
+    <button class="seta" id="prox" type="button" aria-label="Próxima cadeira"><span id="prox-nome"></span>→</button>
   </nav>
 </div>
 
@@ -225,9 +232,316 @@ import '@fontsource/archivo/700.css'
     backdrop-filter: blur(6px);
   }
 
+
+  /* ---- contador de cadeiras ---- */
+  .escritorio .lotacao {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--fonte-mono);
+    font-size: 0.72rem;
+    color: var(--texto-suave);
+    padding: 6px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--linha-2);
+    background: color-mix(in srgb, var(--superficie) 88%, transparent);
+    backdrop-filter: blur(6px);
+    pointer-events: auto;
+  }
+
+  .escritorio .modo-teste {
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: color-mix(in srgb, var(--destaque) 18%, transparent);
+    color: var(--destaque);
+    font-weight: 600;
+  }
+
+  /* ---- aviso rápido (sentou, erro de rede…) ---- */
+  .escritorio .aviso {
+    position: absolute;
+    left: 50%;
+    top: 56px;
+    transform: translateX(-50%);
+    margin: 0;
+    max-width: min(90%, 460px);
+    padding: 9px 14px;
+    border-radius: 6px;
+    background: var(--texto);
+    color: var(--fundo);
+    font-size: 0.85rem;
+    line-height: 1.35;
+    text-align: center;
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+    z-index: 3;
+  }
+
+  /* ---- painel "Monte seu personagem" ---- */
+  .escritorio .editor {
+    position: absolute;
+    top: 56px;
+    right: 12px;
+    bottom: 12px;
+    width: min(340px, calc(100% - 24px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    cursor: auto;
+    z-index: 2;
+    border: 1px solid var(--linha-2);
+    border-radius: var(--raio);
+    background: color-mix(in srgb, var(--superficie) 94%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 40px rgb(0 0 0 / 0.22);
+  }
+
+  .escritorio .editor[hidden] {
+    display: none;
+  }
+
+  .experimento__corpo--tela .escritorio .editor {
+    bottom: 64px;
+  }
+
+  .escritorio:has(.editor:not([hidden])) .navmesas .seta {
+    visibility: hidden;
+  }
+
+  .escritorio .ed-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 16px 14px;
+  }
+
+  .escritorio .ed-topo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .escritorio .ed-titulo {
+    margin: 0;
+    font-family: Archivo, var(--fonte-texto);
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 1.2;
+  }
+
+  .escritorio .ed-sub {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--texto-suave);
+  }
+
+  .escritorio .ed-fechar {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--linha-2);
+    background: transparent;
+    color: var(--texto-suave);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .escritorio .ed-fechar:hover {
+    color: var(--texto);
+    border-color: var(--texto-suave);
+  }
+
+  .escritorio .ed-rot {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+    padding: 0;
+    margin-bottom: 6px;
+  }
+
+  .escritorio .ed-campo {
+    position: relative;
+    margin-top: -4px;
+  }
+
+  .escritorio .ed-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 52px 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--linha-2);
+    background: var(--fundo);
+    color: var(--texto);
+    font: inherit;
+    font-size: 1rem;
+  }
+
+  .escritorio .ed-input:focus {
+    outline: 2px solid var(--destaque);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+
+  .escritorio .ed-cont {
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--fonte-mono);
+    font-size: 0.7rem;
+    color: var(--texto-suave);
+  }
+
+  .escritorio .ed-grupos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .escritorio .ed-grupo {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+
+  .escritorio .ed-cores,
+  .escritorio .ed-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .escritorio .ed-cor {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--superficie);
+    background: var(--c);
+    box-shadow: 0 0 0 1px var(--linha-2);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .escritorio .ed-cor[aria-pressed='true'] {
+    box-shadow: 0 0 0 2px var(--destaque);
+  }
+
+  .escritorio .ed-chip {
+    padding: 6px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--linha-2);
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .escritorio .ed-chip:hover {
+    border-color: var(--texto-suave);
+  }
+
+  .escritorio .ed-chip[aria-pressed='true'] {
+    background: var(--destaque);
+    border-color: var(--destaque);
+    color: var(--fundo);
+    font-weight: 600;
+  }
+
+  .escritorio .ed-erro {
+    margin: 0;
+    min-height: 1.1em;
+    font-size: 0.8rem;
+    color: #e5484d;
+  }
+
+  .escritorio .ed-erro:empty {
+    min-height: 0;
+  }
+
+  .escritorio .ed-acoes {
+    position: sticky;
+    bottom: -14px;
+    display: flex;
+    gap: 8px;
+    margin: 0 -16px -14px;
+    padding: 10px 16px 14px;
+    background: color-mix(in srgb, var(--superficie) 97%, transparent);
+    border-top: 1px solid var(--borda);
+  }
+
+  .escritorio .ed-sec,
+  .escritorio .ed-pri {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .escritorio .ed-sec {
+    border: 1px solid var(--linha-2);
+    background: transparent;
+    color: var(--texto);
+  }
+
+  .escritorio .ed-pri {
+    border: 1px solid var(--destaque);
+    background: var(--destaque);
+    color: var(--fundo);
+  }
+
+  .escritorio .ed-pri:disabled,
+  .escritorio .ed-sec:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  @media (max-width: 700px) {
+    /* no celular o painel vira uma folha embaixo e o boneco aparece acima dela */
+    .escritorio .editor,
+    .experimento__corpo--tela .escritorio .editor {
+      top: auto;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      width: auto;
+      max-height: 56%;
+    }
+
+    .escritorio .aviso {
+      top: auto;
+      bottom: 64px;
+    }
+  }
+
   @media (max-width: 560px) {
     .escritorio .hud {
       display: none;
+    }
+
+    .escritorio .seta span {
+      display: none;
+    }
+
+    .escritorio .navmesas {
+      flex-wrap: nowrap;
+    }
+
+    .escritorio .lotacao {
+      font-size: 0.66rem;
+      padding: 6px 10px;
+      white-space: nowrap;
     }
 
     .escritorio .cams button {
