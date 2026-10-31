@@ -2,7 +2,7 @@
 // REST dele direto (sem biblioteca extra); sem configuração, cai no
 // localStorage para dar para testar o simulador.
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase.js';
-import { TOTAL } from './layout.js';
+import { TOTAL, EQUIPE } from './layout.js';
 import { sanearApelido, sanearVisual } from './visual.js';
 
 const TABELA = 'escritorio_personagens';
@@ -24,7 +24,7 @@ export function sanearLista(linhas) {
   for (const l of Array.isArray(linhas) ? linhas : []) {
     const lugar = Number(l && l.lugar);
     const apelido = sanearApelido(l && l.apelido);
-    if (!Number.isInteger(lugar) || lugar < 0 || lugar >= TOTAL || vistos.has(lugar) || !apelido) continue;
+    if (!Number.isInteger(lugar) || lugar < EQUIPE || lugar >= TOTAL || vistos.has(lugar) || !apelido) continue;
     vistos.add(lugar);
     saida.push({ lugar, apelido, visual: sanearVisual(l.visual) });
   }
@@ -65,7 +65,7 @@ export async function listar() {
 export async function sentar(lugar, apelidoBruto, visualBruto) {
   const apelido = sanearApelido(apelidoBruto);
   if (!apelido) throw new ErroBanco('invalido', 'Escolha um apelido.');
-  if (!Number.isInteger(lugar) || lugar < 0 || lugar >= TOTAL) throw new ErroBanco('invalido', 'Cadeira inválida.');
+  if (!Number.isInteger(lugar) || lugar < EQUIPE || lugar >= TOTAL) throw new ErroBanco('invalido', 'Essa cadeira não está livre.');
   const registro = { lugar, apelido, visual: sanearVisual(visualBruto) };
 
   if (!online) {

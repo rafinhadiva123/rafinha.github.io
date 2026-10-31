@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { LUGARES, TOTAL, SALA, MESA } from './layout.js'
+import { LUGARES, TOTAL, EQUIPE, SALA, MESA } from './layout.js'
+import { PESSOAS } from './pessoas.js'
 import { PADRAO, OPCOES, sanearApelido, sanearVisual, sortearVisual, paraBoneco } from './visual.js'
 import { sanearLista } from './banco.js'
 
@@ -20,6 +21,11 @@ describe('layout', () => {
         const d = Math.hypot(LUGARES[i].x - LUGARES[j].x, LUGARES[i].z - LUGARES[j].z)
         expect(d).toBeGreaterThan(1.2)
       }
+  })
+
+  test('a equipe inteira cabe nas cadeiras fixas', () => {
+    expect(PESSOAS).toHaveLength(EQUIPE)
+    expect(TOTAL - EQUIPE).toBe(25)
   })
 
   test('cada cadeira fica de frente para a mesa', () => {
@@ -77,17 +83,19 @@ describe('visual', () => {
 })
 
 describe('lista do banco', () => {
-  test('descarta lugar inválido, repetido ou sem apelido', () => {
+  test('descarta lugar da equipe, inválido, repetido ou sem apelido', () => {
     const l = sanearLista([
-      { lugar: 0, apelido: 'A', visual: {} },
-      { lugar: 0, apelido: 'B', visual: {} },
+      { lugar: 15, apelido: 'A', visual: {} },
+      { lugar: 15, apelido: 'B', visual: {} },
       { lugar: 40, apelido: 'C', visual: {} },
-      { lugar: 1.5, apelido: 'D', visual: {} },
-      { lugar: 2, apelido: '   ', visual: {} },
-      { lugar: '3', apelido: 'E', visual: null },
+      { lugar: 15.5, apelido: 'D', visual: {} },
+      { lugar: 16, apelido: '   ', visual: {} },
+      { lugar: '18', apelido: 'E', visual: null },
+      { lugar: 12, apelido: 'Impostor', visual: {} },
+      { lugar: 0, apelido: 'Outro', visual: {} },
       null,
     ])
-    expect(l.map(p => [p.lugar, p.apelido])).toEqual([[0, 'A'], [3, 'E']])
+    expect(l.map(p => [p.lugar, p.apelido])).toEqual([[15, 'A'], [18, 'E']])
     expect(sanearLista('não é lista')).toEqual([])
   })
 })

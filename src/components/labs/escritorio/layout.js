@@ -1,6 +1,9 @@
-// Planta do escritório colaborativo, em metros. Quatro ilhas de mesa (2 × 2),
-// cinco cadeiras de cada lado. Para crescer, acrescente ilhas em ILHAS e
-// atualize o limite de `lugar` no supabase/escritorio.sql.
+// Planta do escritório, em metros. Quatro ilhas de mesa (2 × 2), cinco
+// cadeiras de cada lado. As 15 primeiras são da equipe (pessoas.js), na mesma
+// ordem de antes: ilha 1 inteira (antiga Mesa 1) e o lado A da ilha 2
+// (antiga Mesa 2). As outras ficam para os visitantes.
+// Para crescer, acrescente ilhas em ILHAS e atualize o limite de `lugar`
+// no supabase/escritorio.sql.
 //
 //        parede norte (quadro branco)
 //   ┌───────────────────────────────────┐
@@ -49,3 +52,5 @@ ILHAS.forEach((ilha, n) => {
 });
 
 export const TOTAL = LUGARES.length;
+/* cadeiras 0..EQUIPE-1: equipe fixa; EQUIPE..TOTAL-1: abertas a visitantes */
+export const EQUIPE = 15;

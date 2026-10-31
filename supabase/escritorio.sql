@@ -7,7 +7,7 @@
 
 create table if not exists public.escritorio_personagens (
   lugar     smallint primary key
-            check (lugar between 0 and 39),            -- 40 cadeiras (layout.js → TOTAL)
+            check (lugar between 15 and 39),           -- 0-14 são da equipe; 15-39 de visitantes (layout.js)
   apelido   text not null
             check (char_length(btrim(apelido)) between 1 and 18
                    and apelido !~ '[[:cntrl:]]'),

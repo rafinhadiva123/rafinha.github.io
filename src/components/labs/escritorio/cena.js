@@ -1,10 +1,12 @@
-// Sala 3D do escritório colaborativo. Usa three.js r128 (fixado no
-// package.json: as APIs de cor e luz mudaram nas versões seguintes).
-// Começa com as cadeiras vazias; cada visitante clica no + de uma cadeira,
-// monta o personagem com um apelido e ele fica salvo para todo mundo.
+// Sala 3D do escritório. Usa three.js r128 (fixado no package.json: as APIs
+// de cor e luz mudaram nas versões seguintes).
+// A equipe (pessoas.js) ocupa as primeiras cadeiras, com todas as suas manias;
+// as outras começam vazias: cada visitante clica no + de uma, monta o
+// personagem com um apelido e ele fica salvo para todo mundo.
 // Tudo é montado dentro de `raiz`, o bloco do SimuladorEscritorio.astro.
 import * as THREE from 'three'
-import { LUGARES, TOTAL, SALA, ILHAS, MESA, CORREDOR } from './layout.js'
+import { LUGARES, TOTAL, EQUIPE, SALA, ILHAS, MESA, CORREDOR } from './layout.js'
+import { PESSOAS } from './pessoas.js'
 import { desenharQuadro } from './quadro.js'
 import { listar, sentar, online } from './banco.js'
 import { abrirEditor } from './editor.js'
@@ -17,9 +19,11 @@ const CHAVE_MEU = 'escritorio:meus-lugares';
 export function iniciar(raiz) {
   const $ = s => raiz.querySelector(s);
   const palco = $("#palco");
-  let atual = 0;
-  /* quem senta em cada cadeira: boneco pronto para a cena, ou null */
-  const OCUP = new Array(N).fill(null);
+  let atual = 12;
+  /* quem senta em cada cadeira: boneco pronto para a cena, ou null.
+     As cadeiras 0..EQUIPE-1 são da equipe e nunca mudam. */
+  const comEquipe = lista => lista.map((p, i) => (i < EQUIPE ? PESSOAS[i] : p));
+  const OCUP = comEquipe(new Array(N).fill(null));
   /* rascunho do editor: o boneco que está sendo montado agora */
   let rascunho = null;
 
@@ -205,8 +209,9 @@ export function iniciar(raiz) {
     bola(pele, .13, 1.45, .012, .034, c, [.5, 1.15, .9]);
     const mOlho = mat("#F6F3EE", .35), mIris = mat("#2A211B", .3);
     [-.05, .05].forEach(dx => {
-      bola(mOlho, dx, 1.477, .125, .026, c, [1, .82, .6]);
-      bola(mIris, dx, 1.475, .144, .0145, c);
+      const pux = p.olhos === "puxados";
+      bola(mOlho, dx, 1.477, .125, .026, c, pux ? [1.08, .52, .6] : [1, .82, .6]);
+      bola(mIris, dx, 1.475, .144, .0145, c, pux ? [1, .72, 1] : null);
       const sob = caixa(p.mulher ? .046 : .054, p.mulher ? .011 : .018, .016, mcab, dx, 1.515, .134, c);
       sob.rotation.x = -.2; sob.castShadow = false;
     });
@@ -344,6 +349,115 @@ export function iniciar(raiz) {
 
   }
 
+  /* ================= a mesa do acumulador ================= */
+  function bagunca(i){
+    const P = LUGAR[i].posto, L = LUGAR[i], R = sorteio(97 + i);
+    const g = new THREE.Group(); g.position.set(P.x, .78, P.z); g.rotation.y = P.giro; scene.add(g);
+    const marca = (m, sombra) => { m.castShadow = !!sombra; m.receiveShadow = true; m.userData.i = i; alvos.push(m); return m; };
+    const papel = mat("#F4F2EC", .95), papel2 = mat("#E6E0D0", .95), papel3 = mat("#DDE6EE", .95);
+
+    /* pilhas de papel tortas */
+    function pilha(grupo, px, pz, n, larg, y0){
+      let y = y0 || 0;
+      for(let k = 0; k < n; k++){
+        const h = .01 + R() * .016;
+        const b = caixa(larg || .21, h, .29, [papel, papel2, papel3][k % 3], px + (R() - .5) * .035, y + h / 2, pz + (R() - .5) * .035, grupo);
+        b.rotation.y = (R() - .5) * .4; b.rotation.z = (R() - .5) * .03; marca(b, k === n - 1); y += h;
+      }
+      return y;
+    }
+    pilha(g, -.62, -.1, 16); pilha(g, -.4, .17, 26, .23); pilha(g, .68, -.3, 10); pilha(g, .1, .24, 8, .26);
+
+    /* fichários em pé */
+    ["#C8322B", "#1F4FB5", "#1E8A4C", "#E0A21F", "#6B4FA0", "#2B2E33"].forEach((cor, k) => {
+      const b = caixa(.055, .31, .27, mat(cor, .7), -.86 + k * .06, .155, .19, g);
+      b.rotation.z = (k - 2.5) * .03 + (R() - .5) * .05; marca(b, true);
+    });
+
+    /* canecas, copinhos e garrafas */
+    function caneca(px, pz, cor, y0){
+      const y = y0 || 0, m = mat(cor, .45);
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(.042, .038, .1, 14), m); c.position.set(px, y + .05, pz); g.add(c); marca(c, true);
+      const a = new THREE.Mesh(new THREE.TorusGeometry(.027, .008, 6, 12), m); a.position.set(px + .047, y + .05, pz); g.add(a); marca(a);
+      const cf = new THREE.Mesh(new THREE.CircleGeometry(.036, 12), mat("#3B2416", .3));
+      cf.rotation.x = -Math.PI / 2; cf.position.set(px, y + .092, pz); g.add(cf); marca(cf);
+    }
+    caneca(-.43, -.36, "#FFFFFF"); caneca(.44, -.12, "#C8322B"); caneca(-.3, .02, "#1F4FB5");
+    caneca(.66, .12, "#F4F2EC"); caneca(.66, .12, "#E0A21F", .1); caneca(.52, .4, "#2F6F5E", .4);
+    [[-.18, -.52], [.62, -.05], [-.72, -.38], [.36, .16]].forEach(([px, pz], k) => {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(.036, .027, .11, 12), mat("#F7F5F0", .8));
+      c.position.set(px, .055, pz); g.add(c); marca(c, true);
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(.038, .038, .012, 12), mat("#5A3A26", .6));
+      t.position.set(px, .115, pz); g.add(t); marca(t);
+      if(k === 3){ c.rotation.z = Math.PI / 2; c.position.y = .036; t.visible = false; }
+    });
+    [[.46, .22], [.54, .27], [.58, .2]].forEach(([px, pz]) => {
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(.032, .032, .24, 12),
+        new THREE.MeshStandardMaterial({color:0xA9D2EC, transparent:true, opacity:.55, roughness:.1}));
+      b.position.set(px, .12, pz); g.add(b); marca(b);
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(.016, .016, .03, 10), mat("#1F4FB5", .5));
+      t.position.set(px, .255, pz); g.add(t); marca(t);
+    });
+
+    /* notebooks empilhados, salgadinho, bolacha */
+    [0, 1, 2].forEach(k => { const b = caixa(.3, .022, .21, mat(k === 1 ? "#8E9398" : "#3A3D42", .5, .4), -.58, .011 + k * .023, -.4, g);
+      b.rotation.y = (R() - .5) * .3; marca(b, true); });
+    const sal = caixa(.15, .2, .045, mat("#E0A21F", .6), .5, .03, -.3, g); sal.rotation.set(-Math.PI / 2 + .1, .4, 0); marca(sal, true);
+    const bol = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .2, 14), mat("#1F4FB5", .6));
+    bol.rotation.z = Math.PI / 2; bol.rotation.y = .5; bol.position.set(.1, .035, -.52); g.add(bol); marca(bol, true);
+
+    /* ventilador */
+    const vent = new THREE.Group(); vent.position.set(-.82, 0, -.28); vent.rotation.y = .4; g.add(vent);
+    marca(caixa(.14, .025, .12, MAT.plastico, 0, .012, 0, vent), true);
+    marca(caixa(.02, .16, .02, MAT.plastico, 0, .1, 0, vent));
+    const hel = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .045, 20), mat("#DDE1E4", .4));
+    hel.rotation.x = Math.PI / 2; hel.position.set(0, .22, -.01); vent.add(hel); marca(hel, true);
+    const gra = new THREE.Mesh(new THREE.TorusGeometry(.09, .006, 6, 24), MAT.plastico);
+    gra.position.set(0, .22, -.035); vent.add(gra); marca(gra);
+
+    /* plantinha meio morta */
+    const vaso = new THREE.Mesh(new THREE.CylinderGeometry(.06, .045, .09, 12), mat("#B0714A", .8));
+    vaso.position.set(.78, .045, .2); g.add(vaso); marca(vaso, true);
+    [[0, .14, 0], [.03, .12, .02], [-.03, .11, -.01]].forEach(([px, py, pz]) => {
+      const f = bola(mat("#8A9A4C", .9), .78 + px, py, .2 + pz, .035, g, [1, .6, 1]); marca(f);
+    });
+
+    /* post-its colados no monitor (lado que ele vê) */
+    const cores = ["#FFE869", "#FFB3CF", "#B6F0A8", "#A8D8FF", "#FFE869", "#FFC98A"];
+    const pos = [[-.3, .52], [-.2, .54], [-.1, .53], [.02, .545], [.14, .53], [.26, .52],
+                 [-.33, .42], [-.33, .3], [-.32, .2], [.33, .44], [.32, .33], [.33, .22], [-.24, .2], [.24, .19]];
+    pos.forEach(([px, py], k) => {
+      const pl = new THREE.Mesh(new THREE.PlaneGeometry(.065, .065), mat(cores[k % cores.length], .9));
+      pl.position.set(px, py, -.028); pl.rotation.set(0, Math.PI, (R() - .5) * .5); g.add(pl); marca(pl);
+    });
+
+    /* patinho de borracha em cima do monitor */
+    const pato = new THREE.Group(); pato.position.set(.12, .565, .01); pato.rotation.y = Math.PI; g.add(pato);
+    marca(bola(mat("#FFD43B", .4), 0, .03, 0, .042, pato, [1.25, .8, 1]));
+    marca(bola(mat("#FFD43B", .4), .03, .075, 0, .027, pato));
+    marca(bola(mat("#F08A24", .4), .058, .072, 0, .012, pato, [1.4, .6, 1]));
+
+    /* rolo de cabo e papel em cima da torre */
+    const cabo = new THREE.Mesh(new THREE.TorusGeometry(.07, .012, 6, 18), MAT.plastico);
+    cabo.rotation.x = Math.PI / 2; cabo.position.set(-.15, .015, .3); g.add(cabo); marca(cabo);
+    pilha(g, .52, .02, 5, .12, .4);
+
+    /* no chão: caixas, mochila e mais papel */
+    const d = L.giro === 0 ? 1 : -1;
+    const chao = new THREE.Group(); chao.position.set(L.x + .82, 0, L.z - d * .1); scene.add(chao);
+    const pap = mat("#C09A6B", .95);
+    [[.5, .34, .4, 0, .17, 0, .1], [.42, .3, .36, .03, .49, .02, -.18], [.34, .24, .3, -.02, .76, 0, .3]].forEach(([l, a, pr, px, py, pz, ry]) => {
+      const b = caixa(l, a, pr, pap, px, py, pz, chao); b.rotation.y = ry; marca(b, true);
+    });
+    [0, 1, 2, 3].forEach(k => { const f = caixa(.21, .004, .29, papel, (R() - .5) * .1, .9 + k * .005, (R() - .5) * .08, chao);
+      f.rotation.set((R() - .5) * .5, R() * 3, (R() - .5) * .5); marca(f); });
+    const moch = new THREE.Group(); moch.position.set(L.x - .5, 0, L.z - d * .2); moch.rotation.set(-.12, .6, 0); scene.add(moch);
+    marca(caixa(.3, .4, .17, mat("#2C3E50", .85), 0, .2, 0, moch), true);
+    marca(bola(mat("#2C3E50", .85), 0, .4, 0, .15, moch, [1, .45, .57]));
+    marca(caixa(.22, .16, .05, mat("#3D5268", .85), 0, .15, .1, moch));
+    pilha(scene, L.x + .45, L.z + d * .55, 12, .23);
+  }
+
   /* ================= armário do jurídico ================= */
   function armarioJuridico(xParede, zc){
     const P = .5, A = 1.9, L = 1.04;                 /* profundidade, altura, largura */
@@ -472,7 +586,7 @@ export function iniciar(raiz) {
     /* limpa a rodada anterior */
     if(cafe) cafe.pessoas.forEach(st => { st.xicara.parent && st.xicara.parent.remove(st.xicara); resetarPose(st.i); });
     const t = performance.now() / 1000;
-    const ordem = OCUP.map((_, i) => i).filter(i => RIG[i]).sort((a, b) => LUGAR[a].x - LUGAR[b].x || LUGAR[a].z - LUGAR[b].z);
+    const ordem = OCUP.map((_, i) => i).filter(i => RIG[i] && !sumiram.has(i)).sort((a, b) => LUGAR[a].x - LUGAR[b].x || LUGAR[a].z - LUGAR[b].z);
     if(!ordem.length){ aviso("Ainda não tem ninguém sentado para tomar café. Clique num + e sente primeiro."); return; }
     cafe = {t0:t, rodando:true, pessoas:ordem.map(i => {
       const r = RIG[i];
@@ -524,7 +638,7 @@ export function iniciar(raiz) {
           r.c.attach(x); x.position.copy(st.D); x.rotation.set(0, 0, 0);
         }
       }
-      if(st.fase === "mesa" && t - st.tm > st.espera){ st.fase = "beber"; st.tb = t; }
+      if(st.fase === "mesa" && t - st.tm > st.espera && !(lanche && lanche.i === st.i) && !(filmagem && filmagem.i === st.i)){ st.fase = "beber"; st.tb = t; }
 
       if(st.fase === "beber"){
         const b = t - st.tb, s = r.s;
@@ -563,13 +677,127 @@ export function iniciar(raiz) {
     if(terminou && cafe.rodando){ cafe.rodando = false; botaoCafe(false, "Pedir mais café"); }
   }
 
+  /* ================= sanduíche (clicar em quem tem `sanduiche`) ================= */
+  let lanche = null, filmagem = null;
+  const LANCHE_COMP = .09;
+  const MORDIDAS = 4, CICLO = .85, INI = .55, FIM = INI + MORDIDAS * CICLO;
+  function fazSanduiche(){
+    /* segurado de lado, pivô na mão; a fatia se estende para -z, em direção à boca */
+    const g = new THREE.Group(), corpo = new THREE.Group();
+    const camada = (cor, l, a, y, rough) => { const m = caixa(l, a, LANCHE_COMP, mat(cor, rough || .7), 0, y, -LANCHE_COMP / 2, corpo); m.castShadow = false; return m; };
+    camada("#D9A86A", .15, .018, -.024, .85);
+    camada("#E9B84A", .158, .006, -.012, .5);          /* queijo */
+    camada("#D98A8A", .154, .01, -.004, .6);           /* presunto */
+    camada("#6FA84A", .164, .006, .006, .7);           /* alface */
+    camada("#F1DFB8", .15, .004, .011, .9);
+    camada("#D9A86A", .15, .018, .022, .85);
+    g.add(corpo); g.userData = {corpo};
+    return g;
+  }
+  function comerSanduiche(i){
+    const r = RIG[i];
+    if(!r || (lanche && lanche.i === i)) return;
+    /* não disputa o braço com o café */
+    if(cafe && cafe.pessoas.some(st => st.i === i && st.fase === "beber")) return;
+    const s = fazSanduiche(); s.scale.setScalar(.001); r.c.add(s);
+    lanche = {i, t0:performance.now() / 1000, s};
+    filmar(lanche.t0);
+  }
+  function atualizarLanche(t){
+    const L = lanche, r = RIG[L.i], b = t - L.t0, s = r.s;
+    /* quanto do sanduíche ainda existe (1 → 0), caindo a cada mordida */
+    const feitas = Math.max(0, Math.min(MORDIDAS, (b - INI) / CICLO));
+    const inteiras = Math.floor(feitas), fr = feitas - inteiras;
+    const resto = 1 - (inteiras + suaviza((fr - .4) / .15)) / MORDIDAS;
+    /* mão fica onde a ponta do sanduíche encosta na boca, recua entre mordidas */
+    const recuo = b < INI || b >= FIM ? .05 : .05 * (1 - Math.sin(Math.min(1, fr / .55) * Math.PI));
+    const boca = V(s * .02, 1.37, .185 + LANCHE_COMP * Math.max(resto, .15) + recuo);
+    let alvo, aparece = 1;
+    if(b < INI){ const k = suaviza(b / INI); alvo = new THREE.Vector3().lerpVectors(r.T0, boca, k); aparece = k; }
+    else if(b < FIM){ alvo = boca; }
+    else if(b < FIM + .5){ alvo = new THREE.Vector3().lerpVectors(boca, r.T0, suaviza((b - FIM) / .5)); }
+    else {
+      L.s.parent && L.s.parent.remove(L.s); lanche = null;
+      ik(r, r.T0); r.cabCafe = 0; if(r.boca) r.boca.scale.y = 1;
+      if(!disco && r.cab) r.cab.rotation.x = 0;
+      return;
+    }
+    const punho = ik(r, alvo);
+    L.s.position.set(punho.x - s * .02, punho.y + .03, punho.z - .01);
+    L.s.scale.set(aparece, aparece, aparece);
+    L.s.userData.corpo.scale.z = Math.max(.001, resto);
+    L.s.visible = resto > .001;
+    /* mastiga: boca abre e fecha, cabeça acompanha de leve */
+    const mastigando = b > INI && b < FIM + .5;
+    const mast = mastigando ? Math.abs(Math.sin(b * 11)) : 0;
+    if(r.boca) r.boca.scale.y = 1 + mast * 1.8;
+    r.cabCafe = mastigando ? .06 + mast * .04 : 0;
+    if(!disco && r.cab) r.cab.rotation.x = r.cabCafe;
+  }
+
+  /* ================= celular: quem tem `filma` grava quem está comendo ================= */
+  function fazCelular(){
+    /* tela para +z (virada para quem segura), câmera atrás */
+    const g = new THREE.Group();
+    caixa(.072, .145, .009, mat("#1C1D21", .35, .3), 0, 0, 0, g).castShadow = false;
+    const tela = new THREE.Mesh(new THREE.PlaneGeometry(.062, .128), new THREE.MeshBasicMaterial({color:0x56738A}));
+    tela.position.z = .0051; g.add(tela);
+    const rec = new THREE.Mesh(new THREE.CircleGeometry(.0055, 14), new THREE.MeshBasicMaterial({color:0xE5322D}));
+    rec.position.set(-.021, .053, .0056); g.add(rec);
+    const lente = new THREE.Mesh(new THREE.CylinderGeometry(.007, .007, .004, 14), mat("#0B0C0E", .2, .5));
+    lente.rotation.x = Math.PI / 2; lente.position.set(-.022, .055, -.0062); g.add(lente);
+    g.userData = {rec};
+    return g;
+  }
+  function filmar(t0){
+    const f = OCUP.findIndex(p => p && p.filma), r = RIG[f];
+    if(!r || !r.c.visible || filmagem) return;
+    /* o braço é o mesmo do café: se estiver no meio do gole, fica sem gravar */
+    if(cafe && cafe.pessoas.some(st => st.i === f && st.fase === "beber")) return;
+    const cel = fazCelular(); cel.visible = false; r.c.add(cel);
+    filmagem = {i:f, t0, cel};
+  }
+  function atualizarFilmagem(t){
+    const F = filmagem, r = RIG[F.i], b = t - F.t0;
+    const SOBE = .15, NO_AR = .65, DESCE = FIM + .1, FIM_F = DESCE + .5;
+    if(b >= FIM_F){
+      F.cel.parent && F.cel.parent.remove(F.cel); filmagem = null;
+      ik(r, r.T0); r.cabCafe = 0;
+      if(r.cab){ r.cab.rotation.y = 0; if(!disco) r.cab.rotation.x = 0; }
+      return;
+    }
+    /* braço de fora, celular na altura do rosto, câmera apontada para o lado */
+    const alto = V(r.s * .3, 1.36, .34);
+    const k = b < SOBE ? 0 : b < NO_AR ? suaviza((b - SOBE) / (NO_AR - SOBE)) : b < DESCE ? 1 : 1 - suaviza((b - DESCE) / (FIM_F - DESCE));
+    const alvo = new THREE.Vector3().lerpVectors(r.T0, alto, k);
+    alvo.y += k * Math.sin(b * 2.3) * .004;
+    const punho = ik(r, alvo);
+    F.cel.visible = k > .02;
+    F.cel.position.set(punho.x, punho.y + .09, punho.z + .01);
+    F.cel.lookAt(r.c.localToWorld(V(0, 1.47, .1)));
+    F.cel.scale.setScalar(1.3 * Math.max(.001, Math.min(1, k * 1.5)));
+    F.cel.userData.rec.visible = k > .9 && (b * 1.6) % 1 < .6;
+    /* olha para a tela, de leve para baixo */
+    r.cabCafe = .1 * k;
+    if(r.cab){ r.cab.rotation.y = r.s * .45 * k; if(!disco) r.cab.rotation.x = r.cabCafe; }
+  }
+
   /* ================= armário do jurídico: o esqueleto foge ================= */
   /* clicar no armário: sai um homem correndo com o esqueleto debaixo do braço, pelo
-     corredor, até a porta da parede oeste. Dá para repetir sem recarregar. */
+     corredor, até a porta da parede oeste. Quem tem `perseguidor` sai atrás e, quando
+     a fuga acaba, volta para a mesa: dá para repetir a cena sem recarregar. */
   let armario = null, saida = null, fuga = null, ultFuga = 0;
+  const sumiram = new Set();
   const ARMARIO_Z = -3.4, PORTA_Z = CORREDOR.fuga;
   const ROTA_FUGA = [[SALA.x1 - .55, ARMARIO_Z], [SALA.x1 - 1.2, ARMARIO_Z + .1], [SALA.x1 - 1.6, CORREDOR.fuga],
                      [SALA.x0 + .8, CORREDOR.fuga], [SALA.x0 - 1, CORREDOR.fuga]];
+  /* o perseguidor sai por trás da cadeira, contorna a ilha pelo vão mais próximo
+     e entra no corredor atrás do fugitivo */
+  const rotaPerseguidor = L => {
+    const tras = L.z + (L.giro === 0 ? -.75 : .75), vao = L.x > 0 ? .05 : SALA.x0 + .85;
+    return [[L.x, L.z], [L.x - .3, tras], [vao, tras], [vao, CORREDOR.fuga],
+            [SALA.x0 + .8, CORREDOR.fuga], [SALA.x0 - 1, CORREDOR.fuga]];
+  };
 
   function portaSaida(parede){
     /* no referencial da parede oeste: x = .072 é a face de dentro, y = -1.5 é o chão */
@@ -745,9 +973,25 @@ export function iniciar(raiz) {
     const esq = carregarEsqueleto(c);
     c.g.position.set(ROTA_FUGA[0][0], 0, ROTA_FUGA[0][1]);
     scene.add(c.g);
-    fuga = {t0:t,
+    const quem = OCUP.findIndex((p, i) => p && p.perseguidor && RIG[i] && !sumiram.has(i));
+    fuga = {t0:t, perseguidor:quem >= 0 ? quem : null, saiu:false,
             corredores:[{c, esq, rota:fazRota(ROTA_FUGA), vel:2.5, inicio:t + .4}]};
     voarPara(VISTA_GERAL(), 900);
+  }
+
+  function sairCorrendo(i, t){
+    const p = OCUP[i], L = LUGAR[i], r = RIG[i];
+    sumiram.add(i); r.c.visible = false;
+    const cabeca = U => { const h = r.cab.clone(); h.rotation.set(0, 0, 0); U.add(h); return h; };
+    const c = fazCorredor({pele:p.pele, camisa:p.camisa, calca:p.calca, cabeca, esc:.86});
+    c.g.position.set(L.x, 0, L.z); c.g.rotation.y = L.giro;
+    scene.add(c.g);
+    fuga.corredores.push({c, rota:fazRota(rotaPerseguidor(L)), vel:2.9, inicio:t + .35, ang:L.giro, pulo:true});
+  }
+
+  function voltarPerseguidores(){
+    sumiram.forEach(i => { if(RIG[i]) RIG[i].c.visible = true; });
+    sumiram.clear();
   }
 
   function atualizarFuga(t){
@@ -768,11 +1012,17 @@ export function iniciar(raiz) {
         g.rotation.y = r.ang;
         const f = d * 3.4;
         if(t >= r.inicio) correr(r.c, f);
+        /* o perseguidor levanta num pulo antes de sair */
+        r.c.corpo.position.y = r.pulo && t < r.inicio ? .22 * Math.sin(Math.PI * (1 - (r.inicio - t) / .35)) : 0;
         if(r.esq) balancarEsqueleto(r.esq, f, t);
         if(P.x < SALA.x0 + 2.6) pertoDaSaida = true;
         if(d >= r.rota.tot){ r.fim = true; scene.remove(g); }
       });
-      if(acabou) fuga = null;
+      const g0 = fuga.corredores[0].c.g;
+      if(fuga.perseguidor !== null && !fuga.saiu && g0.position.x < LUGAR[fuga.perseguidor].x + .8){
+        fuga.saiu = true; sairCorrendo(fuga.perseguidor, t); acabou = false;
+      }
+      if(acabou){ fuga = null; voltarPerseguidores(); }
     }
     if(armario){
       const alvo = fuga && t - fuga.t0 < 1.5 ? 1 : 0;
@@ -979,9 +1229,38 @@ export function iniciar(raiz) {
     scene.add(g);
   }
 
+  /* porta-retrato em pé na mesa, virado para quem senta: coração com um nome */
+  function portaRetrato(i, nome){
+    const P = LUGAR[i].posto;
+    const cv = document.createElement("canvas"); cv.width = 256; cv.height = 320;
+    const x = cv.getContext("2d");
+    x.fillStyle = "#F7F1E6"; x.fillRect(0, 0, 256, 320);
+    x.fillStyle = "#D2334A"; x.beginPath();
+    x.moveTo(128, 272);
+    x.bezierCurveTo(30, 205, 14, 140, 34, 104);
+    x.bezierCurveTo(58, 60, 116, 62, 128, 112);
+    x.bezierCurveTo(140, 62, 198, 60, 222, 104);
+    x.bezierCurveTo(242, 140, 226, 205, 128, 272);
+    x.fill();
+    x.fillStyle = "#FFFFFF"; x.font = "italic 700 58px Georgia, serif";
+    x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(nome, 128, 160, 170);
+    const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+
+    const g = new THREE.Group(); g.position.set(P.x, .78, P.z); g.rotation.y = P.giro; scene.add(g);
+    const pe = new THREE.Group(); pe.position.set(-.44, 0, -.14); pe.rotation.y = 2.45; g.add(pe);
+    const q = new THREE.Group(); q.position.y = .105; q.rotation.x = -.16; pe.add(q);
+    const moldura = mat("#6B4A2E", .6);
+    caixa(.17, .012, .016, moldura, 0, .1, 0, q); caixa(.17, .012, .016, moldura, 0, -.1, 0, q);
+    caixa(.012, .212, .016, moldura, -.079, 0, 0, q); caixa(.012, .212, .016, moldura, .079, 0, 0, q);
+    caixa(.17, .21, .006, moldura, 0, 0, -.006, q);
+    const foto = new THREE.Mesh(new THREE.PlaneGeometry(.148, .19), new THREE.MeshStandardMaterial({map:tex, roughness:.55}));
+    foto.position.z = .0005; q.add(foto);
+    const apoio = osso(moldura, V(0, .07, -.01), V(0, -.105, -.07), .006, .006, q, 6); apoio.castShadow = false;
+  }
+
   function montar(){
     P = escuro ? PAL.escuro : PAL.claro;
-    cafe = null; fuga = null; botaoCafe(false, "Pedir café");
+    cafe = null; lanche = null; filmagem = null; fuga = null; sumiram.clear(); botaoCafe(false, "Pedir café");
     if(_texMais){ _texMais.dispose(); _texMais = null; }
     scene = new THREE.Scene();
     scene.background = new THREE.Color(P.bg);
@@ -1048,6 +1327,8 @@ export function iniciar(raiz) {
       const p = rascunho && rascunho.i === i ? rascunho.p : OCUP[i];
       if(p) fazPessoa(i, p); else fazCadeiraVazia(i);
     }
+    OCUP.forEach((p, i) => { if(p && p.acumulador) bagunca(i); });
+    OCUP.forEach((p, i) => { if(p && p.retrato) portaRetrato(i, p.retrato); });
     carrinho = fazCarrinho(); carrinho.position.set(CARRO_FIM, 0, CORREDOR.cafe); scene.add(carrinho);
 
     /* anel de seleção + etiqueta */
@@ -1207,6 +1488,8 @@ export function iniciar(raiz) {
     if(anim) anim(performance.now());
     const agora = performance.now() / 1000;
     if(cafe) atualizarCafe(agora);
+    if(lanche) atualizarLanche(agora);
+    if(filmagem) atualizarFilmagem(agora);
     maisSprites.forEach((m, i) => { if(m) m.position.y = m.userData.base + Math.sin(agora * 2.2 + i * .7) * .04; });
     atualizarFuga(agora);
     atualizarDisco(agora);
@@ -1248,7 +1531,10 @@ export function iniciar(raiz) {
       else if(hit && hit.object.userData.i !== undefined){
         const i = hit.object.userData.i;
         if(hit.object.userData.livre) comecarEdicao(i);
-        else selecionar(i);
+        else {
+          selecionar(i);
+          if(OCUP[i] && OCUP[i].sanduiche) comerSanduiche(i);
+        }
       }
     }
   }
@@ -1356,6 +1642,7 @@ export function iniciar(raiz) {
       const lista = await listar();
       const novo = new Array(N).fill(null);
       lista.forEach(r => { novo[r.lugar] = paraBoneco(r.apelido, r.visual); });
+      comEquipe(novo).forEach((p, i) => { novo[i] = p; });
       let mudou = false;
       for(let i = 0; i < N; i++){
         const igual = JSON.stringify(novo[i]) === JSON.stringify(OCUP[i]);
@@ -1382,8 +1669,8 @@ export function iniciar(raiz) {
   }
   function atualizarContador(){
     const c = $("#lotacao"); if(!c) return;
-    const n = OCUP.filter(Boolean).length;
-    c.textContent = n === N ? `${N} de ${N} · lotado` : `${n} de ${N} ocupadas`;
+    const livres = N - EQUIPE, n = OCUP.slice(EQUIPE).filter(Boolean).length;
+    c.textContent = n === livres ? `${livres} de ${livres} · lotado` : `${n} de ${livres} lugares de visitante`;
   }
 
   /* ================= arranque ================= */
@@ -1393,8 +1680,7 @@ export function iniciar(raiz) {
   carregar().then(() => {
     const pedido = ini ? +ini[1] - 1 : -1;
     const meu = lerMeus().find(i => OCUP[i]);
-    const primeiro = OCUP.findIndex(Boolean);
-    const i = pedido >= 0 && pedido < N ? pedido : meu !== undefined ? meu : Math.max(0, primeiro);
+    const i = pedido >= 0 && pedido < N ? pedido : meu !== undefined ? meu : 12;
     selecionar(i, true);
     if(ok3d && (pedido >= 0 || meu !== undefined)) setTimeout(() => olharPara(atual), 400);
   });
