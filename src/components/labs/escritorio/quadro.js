@@ -175,6 +175,7 @@ function painel(p) {
 }
 
 async function comoDataUrl(url) {
+  if (url.startsWith('data:')) return url
   const blob = await (await fetch(url)).blob()
   return new Promise((ok, erro) => {
     const leitor = new FileReader()

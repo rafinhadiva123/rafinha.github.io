@@ -8,7 +8,7 @@ import * as THREE from 'three'
 import { LUGARES, TOTAL, EQUIPE, SALA, ILHAS, MESA, CORREDOR } from './layout.js'
 import { PESSOAS } from './pessoas.js'
 import { desenharQuadro } from './quadro.js'
-import { listar, sentar, online } from './banco.js'
+import { listar, sentar, online, meuPersonagem } from './banco.js'
 import { abrirEditor } from './editor.js'
 import { paraBoneco } from './visual.js'
 
@@ -1598,8 +1598,10 @@ export function iniciar(raiz) {
     if(OCUP[i]){ selecionar(i); return; }
     if(editor) editor.fechar();
     atual = i;
+    const meu = meuPersonagem();
     editor = abrirEditor($("#editor"), {
       lugar: i,
+      inicial: meu,
       mudou(apelido, visual){
         rascunho = {i, p:paraBoneco(apelido, visual)};
         if(renderer){ trocarLugar(i, rascunho.p); atualizarNomes(); marcarSelecao(); }
@@ -1634,12 +1636,13 @@ export function iniciar(raiz) {
   }
 
   /* ================= carregar do banco ================= */
-  let carregando = false;
+  let carregando = false, deNovo = false;
   async function carregar(){
-    if(carregando) return;
+    if(carregando){ deNovo = true; return; }
     carregando = true;
     try{
       const lista = await listar();
+      if($("#modo-teste")) $("#modo-teste").hidden = online;
       const novo = new Array(N).fill(null);
       lista.forEach(r => { novo[r.lugar] = paraBoneco(r.apelido, r.visual); });
       comEquipe(novo).forEach((p, i) => { novo[i] = p; });
@@ -1661,6 +1664,7 @@ export function iniciar(raiz) {
       aviso(err.message || "Não deu para carregar o escritório.");
     }finally{
       carregando = false;
+      if(deNovo){ deNovo = false; carregar(); }
     }
   }
   function selecionarRotulos(){
@@ -1674,7 +1678,6 @@ export function iniciar(raiz) {
   }
 
   /* ================= arranque ================= */
-  if(!online) $("#modo-teste") && ($("#modo-teste").hidden = false);
   const ini = /^#mesa-(\d{1,2})$/.exec(location.hash);
   const ok3d = iniciar3D();
   carregar().then(() => {
@@ -1687,4 +1690,6 @@ export function iniciar(raiz) {
   /* de tempos em tempos, vê quem chegou */
   setInterval(() => { if(document.visibilityState === "visible") carregar(); }, 25000);
   document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") carregar(); });
+  /* bancos com tempo real avisam quando alguém senta */
+  window.addEventListener("escritorio:mudou", () => carregar());
 }

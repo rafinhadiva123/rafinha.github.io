@@ -62,6 +62,12 @@ export async function listar() {
   return sanearLista(await r.json());
 }
 
+/** O personagem que esta pessoa já tem, quando o banco sabe quem ela é.
+ *  No site (Supabase anônimo) ninguém tem login, então é sempre null. */
+export function meuPersonagem() {
+  return null;
+}
+
 export async function sentar(lugar, apelidoBruto, visualBruto) {
   const apelido = sanearApelido(apelidoBruto);
   if (!apelido) throw new ErroBanco('invalido', 'Escolha um apelido.');

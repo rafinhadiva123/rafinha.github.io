@@ -35,22 +35,29 @@ function el(tag, attrs = {}, filhos = []) {
   return e;
 }
 
-export function abrirEditor(raiz, { lugar, mudou, salvar, cancelar, ocupada }) {
-  let visual = sortearVisual();
+export function abrirEditor(raiz, { lugar, inicial, mudou, salvar, cancelar, ocupada }) {
+  let visual = inicial ? { ...inicial.visual } : sortearVisual();
   let enviando = false;
   let fechado = false;
   raiz.replaceChildren();
   raiz.hidden = false;
 
-  const titulo = el('h2', { classe: 'ed-titulo', id: 'ed-titulo', texto: 'Monte seu personagem' });
-  const sub = el('p', { classe: 'ed-sub', texto: `Cadeira ${String(lugar + 1).padStart(2, '0')} · fica salvo para todo mundo que abrir o escritório.` });
+  const nCadeira = n => String(n + 1).padStart(2, '0');
+  const titulo = el('h2', { classe: 'ed-titulo', id: 'ed-titulo', texto: inicial ? 'Mudar de cadeira' : 'Monte seu personagem' });
+  const sub = el('p', {
+    classe: 'ed-sub',
+    texto: inicial
+      ? `Você está na cadeira ${nCadeira(inicial.lugar)}. Ao sentar aqui, na ${nCadeira(lugar)}, a antiga fica livre.`
+      : `Cadeira ${nCadeira(lugar)} · fica salvo para todo mundo que abrir o escritório.`,
+  });
   const fechar = el('button', { type: 'button', classe: 'ed-fechar', 'aria-label': 'Cancelar e fechar', texto: '×', onclick: () => sair() });
 
   const campo = el('input', {
     type: 'text', id: 'ed-apelido', classe: 'ed-input', maxlength: String(APELIDO_MAX * 2),
     autocomplete: 'off', spellcheck: 'false', placeholder: 'Como te chamam?', enterkeyhint: 'done',
   });
-  const contador = el('span', { classe: 'ed-cont', 'aria-hidden': 'true', texto: `0/${APELIDO_MAX}` });
+  const contador = el('span', { classe: 'ed-cont', 'aria-hidden': 'true', texto: `${inicial ? [...inicial.apelido].length : 0}/${APELIDO_MAX}` });
+  if (inicial) campo.value = inicial.apelido;
   campo.addEventListener('input', () => {
     const limpo = sanearApelido(campo.value);
     contador.textContent = `${[...limpo].length}/${APELIDO_MAX}`;
