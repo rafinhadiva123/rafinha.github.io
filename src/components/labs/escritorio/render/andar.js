@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ZONAS } from '../planta/dados.js';
-import { LUGARES } from '../planta/lugares.js';
+import { LUGARES, LUGAR } from '../planta/lugares.js';
 import { montarCenario } from './cenario.js';
 import { mesclarEstatico } from './estatico.js';
 import { montarMoveis } from './moveis.js';
@@ -61,6 +61,14 @@ export function criarAndar(palco, { rotulos } = {}) {
   cena.add(mundo);
   cena.add(montarMoveis(M));
   const multidao = criarMultidao(cena);
+
+  /* anel de seleção no chão, na cor de destaque da página */
+  const corDestaque = () => getComputedStyle(palco).getPropertyValue('--accent').trim() || '#24306b';
+  const anel = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.55, 40), new THREE.MeshBasicMaterial({ color: corDestaque(), transparent: true, opacity: 0.9, depthWrite: false }));
+  anel.rotation.x = -Math.PI / 2;
+  anel.visible = false;
+  anel.renderOrder = 2;
+  cena.add(anel);
   renderer.shadowMap.needsUpdate = true;
 
   /* rótulos das zonas (HTML por cima do canvas) */
@@ -93,6 +101,47 @@ export function criarAndar(palco, { rotulos } = {}) {
     voarPara(new THREE.Vector3(20, 118 * k, 10.9), new THREE.Vector3(20, 0, 10.8));
   }
   function irPara(x, z, dist = 9) { voarPara(new THREE.Vector3(x - dist * 0.6, dist, z + dist), new THREE.Vector3(x, 0, z)); }
+
+  /** Câmera de frente para quem senta na cadeira. painel: 'direita' deixa o
+      boneco à esquerda da tela; 'baixo' deixa o boneco na metade de cima. */
+  function olharPara(id, painel) {
+    const l = LUGAR.get(id);
+    if (!l) return;
+    modo = '3d';
+    controles.maxPolarAngle = 1.45;
+    const frente = new THREE.Vector3(Math.sin(l.giro), 0, Math.cos(l.giro));
+    /* por cima dos monitores: a câmera fica do outro lado da bancada, alta, olhando o rosto */
+    const alvo = new THREE.Vector3(l.x, 1.25 + (l.dy || 0), l.z);
+    const pos = alvo.clone().addScaledVector(frente, 2.5).add(new THREE.Vector3(0, 1.45, 0));
+    if (painel === 'direita') {
+      const direita = new THREE.Vector3().crossVectors(frente.clone().negate(), new THREE.Vector3(0, 1, 0)).normalize();
+      alvo.addScaledVector(direita, 0.95); pos.addScaledVector(direita, 0.95);
+    } else if (painel === 'baixo') {
+      alvo.y -= 0.85; pos.y += 0.5; pos.addScaledVector(frente, 0.8);
+    }
+    voarPara(pos, alvo, 1000);
+  }
+
+  /** Qual cadeira está embaixo do ponto da tela (clientX, clientY), ou null. */
+  const raio = new THREE.Raycaster(), plano = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5), acerto = new THREE.Vector3();
+  function lugarEm(cx, cy) {
+    const r = renderer.domElement.getBoundingClientRect();
+    raio.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), camera);
+    if (!raio.ray.intersectPlane(plano, acerto)) return null;
+    let melhor = null, d = 0.7;
+    for (const l of LUGARES) {
+      const e = Math.hypot(l.x - acerto.x, l.z - acerto.z);
+      if (e < d) { d = e; melhor = l.id; }
+    }
+    return melhor;
+  }
+
+  function selecionar(id) {
+    const l = id && LUGAR.get(id);
+    anel.visible = Boolean(l);
+    if (l) { anel.position.set(l.x, 0.025, l.z); anel.material.color.set(corDestaque()); }
+    marcar();
+  }
 
   function redimensionar() {
     const r = palco.getBoundingClientRect();
@@ -151,7 +200,8 @@ export function criarAndar(palco, { rotulos } = {}) {
 
   return {
     renderer, cena, camera, controles, multidao,
-    vista3d, vistaTopo, irPara,
+    vista3d, vistaTopo, irPara, olharPara, lugarEm, selecionar,
+    focar(id) { multidao.definirFoco(id); camMudou = true; marcar(); },
     /** Map(idDoLugar -> personagem) */
     definirOcupantes(mapa) {
       multidao.definir(mapa);

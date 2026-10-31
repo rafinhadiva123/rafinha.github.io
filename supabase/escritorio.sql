@@ -75,15 +75,15 @@ language sql immutable
 set search_path = ''
 as $$
   select jsonb_typeof(v) = 'object'
-    and v ?& array['pele', 'cabelo', 'corCabelo', 'camisa', 'barba', 'oculos', 'tracos', 'acessorio', 'corLaco', 'altura']
+    and v ?& array['pele', 'cabelo', 'corCabelo', 'camisa', 'barba', 'oculos', 'silhueta', 'acessorio', 'corLaco', 'altura']
     and (select count(*) from jsonb_object_keys(v)) = 10
     and v->>'pele' in ('#F6DDC7', '#F1D2B8', '#E9C4A2', '#D9AC86', '#C28D64', '#A06E48', '#7D5134', '#5A3825')
-    and v->>'cabelo' in ('curto', 'topete', 'baguncado', 'medio', 'longo', 'chanel', 'coque', 'calvoFrente', 'careca')
-    and v->>'corCabelo' in ('#15110F', '#3A2517', '#6B4A2E', '#A0522D', '#D2B06E', '#B9B4AC', '#E98AB0', '#4A7FC1')
-    and v->>'camisa' in ('#2F6F5E', '#3E5A7A', '#C4633F', '#8E5B7A', '#B08A3E', '#33373C', '#F4F3EF', '#4E7A5E', '#D2334A', '#6D7B8C')
+    and v->>'cabelo' in ('curto', 'topete', 'medio', 'longo', 'coque', 'calvoFrente', 'careca')
+    and v->>'corCabelo' in ('#15110F', '#3A2517', '#6B4A2E', '#A0522D', '#D2B06E', '#B9B4AC')
+    and v->>'camisa' in ('#F4F3EF', '#2F6F5E', '#3E5A7A', '#D9849B', '#F2C4CF', '#23262B', '#8A8F98')
     and v->>'barba' in ('nenhuma', 'barbinha', 'cheia')
     and v->>'oculos' in ('nenhum', 'normal', 'redondo')
-    and v->>'tracos' in ('marcados', 'suaves')
+    and v->>'silhueta' in ('pequena', 'media', 'grande')
     and v->>'acessorio' in ('nenhum', 'laco', 'fone')
     and v->>'corLaco' in ('#E98AB0', '#D2334A', '#F2C14E', '#5B8DEF')
     and v->>'altura' in ('baixa', 'media', 'alta')

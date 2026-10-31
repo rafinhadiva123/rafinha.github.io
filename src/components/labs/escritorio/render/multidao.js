@@ -54,6 +54,7 @@ export function criarMultidao(cena) {
   const cache = new Map();            /* id -> {grupo, chave, usado} */
   const nomes = new Map();            /* id -> Sprite */
   let detalhados = new Set();
+  let foco = null;            /* cadeira que aparece sempre completa (editor aberto) */
   const base = new THREE.Object3D();
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
 
@@ -127,9 +128,10 @@ export function criarMultidao(cena) {
     if (!mostrar) { if (s) s.visible = false; return; }
     if (!s || s.userData.texto !== o.p.apelido) {
       if (s) { grupo.remove(s); s.material.map.dispose(); s.material.dispose(); }
-      s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texturaNome(o.p.apelido), depthWrite: false }));
+      /* tamanho fixo na tela, perto ou longe */
+      s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texturaNome(o.p.apelido), depthWrite: false, sizeAttenuation: false }));
       s.userData.texto = o.p.apelido;
-      s.scale.set(0.9, 0.225, 1);
+      s.scale.set(0.15, 0.0375, 1);
       s.renderOrder = 5;
       nomes.set(o.id, s);
       grupo.add(s);
@@ -172,6 +174,7 @@ export function criarMultidao(cena) {
       }
       perto.sort((a, b) => a[0] - b[0]);
       const novo = new Set(perto.slice(0, MAX_DETALHE).map(([, o]) => o.id));
+      if (foco && porId.has(foco)) novo.add(foco);
 
       let mudou = false;
       for (const id of detalhados) {
@@ -201,6 +204,7 @@ export function criarMultidao(cena) {
       return mudou;
     },
 
+    definirFoco(id) { foco = id; },
     get total() { return ocupantes.length; },
     get detalhados() { return detalhados.size; },
     rigDe(id) { const c = cache.get(id); return c && detalhados.has(id) ? c.rig : null; },

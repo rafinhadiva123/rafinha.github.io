@@ -62,36 +62,44 @@ export function fazBoneco(p, i){
   const sapato = mat("#24262A", .6, .1);
   const mcab = mat(p.cor, .96);
 
+  /* silhueta: pequena, média ou grande muda largura e profundidade do corpo
+     (os fixos antigos, sem silhueta, seguem o `mulher`) */
+  const SIL = { pequena: [.86, .92, .92], media: [1, 1, 1], grande: [1.26, 1.2, 1.18] };
+  const [larg, prof, perna] = SIL[p.silhueta] || (p.mulher ? [.9, 1, 1] : [1, 1, 1]);
+
   /* pernas sob a mesa */
-  [-.135, .135].forEach(dx => {
-    osso(calca, V(dx, .55, -.02), V(dx * 1.06, .54, .42), .105, .1, c);
-    bola(calca, dx * 1.06, .53, .43, .1, c);
+  [-.135 * Math.sqrt(larg), .135 * Math.sqrt(larg)].forEach(dx => {
+    osso(calca, V(dx, .55, -.02), V(dx * 1.06, .54, .42), .105 * perna, .1 * perna, c);
+    bola(calca, dx * 1.06, .53, .43, .1 * perna, c);
     osso(calca, V(dx * 1.06, .5, .44), V(dx * 1.06, .1, .47), .085, .07, c);
     const sp = caixa(.14, .08, .28, sapato, dx * 1.06, .045, .56, c); sp.rotation.x = .06;
   });
 
   /* tronco, gola e pescoço */
-  const tr = tronco(camisa, c); if(p.mulher) tr.scale.x = .9;
+  const tr = tronco(camisa, c); tr.scale.x = larg; tr.scale.z = .68 * prof;
   const gola = new THREE.Mesh(new THREE.CylinderGeometry(.115, .155, .09, 18), camisa2);
   gola.position.set(0, 1.27, .02); gola.scale.z = .74; gola.castShadow = true; c.add(gola);
   osso(pele, V(0, 1.24, .02), V(0, 1.37, .025), .072, .078, c, 14);
-  if(p.social){
-    const mcol = mat("#FFFFFF", .8);
+  /* camisa social para todo mundo: gola, carcela e botões */
+  {
+    const mcol = mat(new THREE.Color(p.camisa).lerp(new THREE.Color("#FFFFFF"), .12).getStyle(), .8);
     [-1, 1].forEach(s => {
-      const pt = caixa(.075, .055, .014, mcol, s * .045, 1.245, .118, c);
+      const pt = caixa(.075, .055, .014, mcol, s * .045, 1.245, .118 + .02 * (prof - 1), c);
       pt.rotation.set(-.35, 0, s * .55); pt.castShadow = false;
     });
-    const vinco = caixa(.022, .5, .01, camisa2, 0, .98, .184, c); vinco.castShadow = false;
-    [1.14, 1.02, .9, .78].forEach(y => bola(mat("#D8D6D0", .5), 0, y, .19, .008, c));
+    const zf = .02 + .164 * prof;   /* frente do tronco nessa silhueta */
+    const vinco = caixa(.022, .5, .01, camisa2, 0, .98, zf, c); vinco.castShadow = false;
+    [1.14, 1.02, .9, .78].forEach(y => bola(mat("#D8D6D0", .5), 0, y, zf + .006, .008, c));
   }
 
   /* braços com cotovelo, mãos na mesa */
   [-1, 1].forEach(s => {
-    const ombro = V(s * (p.mulher ? .218 : .238), 1.155, .02), cotovelo = V(s * .29, .93, .18), mao = V(s * .2, .8, .6);
+    const ombro = V(s * .238 * (larg < 1 ? .916 : larg), 1.155, .02), cotovelo = V(s * .29, .93, .18), mao = V(s * .2, .8, .6);
     bola(camisa, ombro.x, ombro.y, ombro.z, .088, c);
     const sup = osso(camisa, ombro, cotovelo, .075, .066, c);
     const cot = bola(camisa2, cotovelo.x, cotovelo.y, cotovelo.z, .066, c);
-    const ant = osso(pele, cotovelo, mao, .062, .05, c);
+    /* manga comprida até o punho; só a mão fica de fora */
+    const ant = osso(camisa, cotovelo, mao, .062, .052, c);
     const mm = bola(pele, mao.x, mao.y, mao.z + .03, .062, c, [.85, .55, 1.25]);
     if(s === -1) rig = {S:ombro, T0:mao.clone(), a:ombro.distanceTo(cotovelo), b:cotovelo.distanceTo(mao), s, sup, cot, ant, mao:mm, c, g};
   });
@@ -134,12 +142,24 @@ export function fazBoneco(p, i){
     capa.castShadow = true; c.add(capa);
     const nuca = new THREE.Mesh(new THREE.SphereGeometry(.15, 18, 14, Math.PI, Math.PI, .25, 1.45), mcab);
     nuca.position.set(0, 1.45, .028); nuca.scale.set(1.01, 1.1, 1.05); c.add(nuca);
-    if(p.cabelo === "medio" || p.cabelo === "longo")
-      [-.128, .128].forEach(dx => bola(mcab, dx, 1.4, -.01, .07, c, [.55, 1.5, 1.05]));
-    if(p.cabelo === "longo"){
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(.155, .185, .34, 18, 1, true, Math.PI * .3, Math.PI * 1.4), mcab);
-      m.position.set(0, 1.28, -.03); m.scale.z = .72; m.castShadow = true; c.add(m);
-      bola(mcab, 0, 1.12, -.05, .17, c, [1, .55, .7]);
+    /* médio e longo: uma "cortina" contínua que sai da nuca e das laterais,
+       aberta na frente do rosto, sem degrau entre as partes */
+    if(p.cabelo === "medio" || p.cabelo === "longo"){
+      const longo = p.cabelo === "longo";
+      const perfil = [[.150, .03], [.158, -.03], [.162, -.09], [.161, -.15], [.163, -.21], [.168, -.27], [.152, -.29]];
+      const geo = new THREE.LatheGeometry(perfil.map(([r, y]) => new THREE.Vector2(r, y)), 32, Math.PI * .3, Math.PI * 1.4);
+      const mDupla = mcab.clone(); mDupla.side = THREE.DoubleSide;
+      const cortina = new THREE.Mesh(geo, mDupla);
+      cortina.position.set(0, 1.46, .02); cortina.scale.set(1.02, 1, .93); cortina.castShadow = true;
+      c.add(cortina);
+      /* longo: continua pelas costas, por fora do tronco, a partir da nuca */
+      if(longo){
+        const costas = [[.163, -.12], [.19, -.18], [.235, -.23], [.268, -.29], [.28, -.37], [.278, -.46], [.272, -.55], [.248, -.57]];
+        const gc = new THREE.LatheGeometry(costas.map(([r, y]) => new THREE.Vector2(r, y)), 24, Math.PI * .66, Math.PI * .68);
+        const manto = new THREE.Mesh(gc, mDupla);
+        manto.position.set(0, 1.46, .02); manto.scale.set(1, 1, .86); manto.castShadow = true;
+        c.add(manto);
+      }
     }
     if(p.cabelo === "chanel"){
       const m = new THREE.Mesh(new THREE.CylinderGeometry(.152, .166, .17, 20, 1, true, Math.PI * .3, Math.PI * 1.4), mcab);
@@ -202,7 +222,8 @@ export function fazBoneco(p, i){
   if(p.fone){
     const mf = mat("#1C1F23", .7, .15);
     const arco = new THREE.Mesh(new THREE.TorusGeometry(.155, .02, 8, 22, Math.PI), mf);
-    arco.position.set(0, 1.47, .025); arco.rotation.y = Math.PI / 2; arco.castShadow = true; c.add(arco);
+    /* arco de orelha a orelha, por cima da cabeça (meia volta no plano do rosto) */
+    arco.position.set(0, 1.47, .025); arco.castShadow = true; c.add(arco);
     [-.163, .163].forEach(dx => {
       const cp = new THREE.Mesh(new THREE.CylinderGeometry(.055, .055, .035, 14), mf);
       cp.position.set(dx, 1.452, .02); cp.rotation.z = Math.PI / 2; cp.castShadow = true; c.add(cp);
