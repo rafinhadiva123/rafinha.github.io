@@ -36,7 +36,7 @@ function el(tag, attrs = {}, html) {
  * @param opcoes.avisar(texto)  mensagem curta na tela
  * @param opcoes.aoMudar(ativo) entrou ou saiu do modo boneco
  * @param opcoes.aoClicar(cx, cy) clique sem arrastar; true se ele foi usado
- *                        (o armário da fuga, por exemplo) e o boneco não anda
+ *                        (o armário da fuga, por exemplo)
  */
 export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => {}, aoClicar = () => false } = {}) {
   const g = andar.colisao, camera = andar.camera, alvo = andar.controles.target;
@@ -82,7 +82,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   let x = 0, z = 0, y = OLHOS, giro = 0, inclina = -0.08;
   const teclas = new Set();
   let joyX = 0, joyY = 0;
-  let rota = null;           /* [{x,z}] para onde está indo no clique-para-andar */
+  let rota = null;           /* [{x,z}] para onde está indo (irAte) */
   let mexido = true;
 
   function aplicarCamera() {
@@ -155,7 +155,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     sair.hidden = false;
     teclasAjuda.hidden = !toqueFino.matches;
     ajuda.hidden = toqueFino.matches;
-    ajuda.textContent = 'Joystick para andar · arraste para olhar · toque no chão para ir até lá';
+    ajuda.textContent = 'Joystick para andar · arraste para olhar';
     joy.hidden = toqueFino.matches;
     andar.renderer.domElement.focus({ preventScroll: true });
   }
@@ -223,11 +223,12 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     if (p) entrar(p); else avisar('Aproxime de um corredor e tente de novo.');
   }
 
-  /* ---- olhar e clicar no chão para ir ----
+  /* ---- olhar ----
      Mouse: o olhar segue o mouse sem apertar nada; com o cursor perto da
      borda esquerda ou direita da tela, continua virando (dá para dar a
      volta sem o cursor bater no fim da tela). Dedo: arrasta para olhar.
-     Em qualquer um, clique/toque sem arrastar anda até o ponto. */
+     Clique/toque sem arrastar só serve para as coisas da cena (aoClicar);
+     no chão, não faz nada. */
   const canvas = andar.renderer.domElement;
   let olhar = null;          /* dedo arrastando */
   let ultimo = null;         /* última posição do mouse em cima do canvas */
@@ -238,12 +239,6 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     giro -= dx * sens;
     inclina = Math.max(-1.0, Math.min(0.9, inclina - dy * sens));
     mexido = true;
-  }
-  function andarAte(cx, cy) {
-    const p = soltarEm(cx, cy);
-    const r = p && Math.hypot(p.x - x, p.z - z) > 0.3 && caminho(g, { x, z }, p);
-    if (r) { rota = r; mostrarMarca(p); }
-    else if (!p) avisar('Não dá para ir até lá.');
   }
 
   canvas.addEventListener('pointermove', e => {
@@ -273,7 +268,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     if (!ativo || !apertou) return;
     const clique = Math.hypot(e.clientX - apertou.x, e.clientY - apertou.y) < 8;
     apertou = null; olhar = null;
-    if (clique && !aoClicar(e.clientX, e.clientY)) andarAte(e.clientX, e.clientY);
+    if (clique) aoClicar(e.clientX, e.clientY);
   });
   canvas.addEventListener('pointercancel', () => { olhar = null; apertou = null; });
 
