@@ -144,7 +144,7 @@ describe('controlador com banco falso', () => {
     expect(tela.carga.hidden).toBe(true)
   })
 
-  test('sentar pelo "+": salva, some o editor, mostra aviso e a cadeira fica ocupada', async () => {
+  test('sentar pelo "+": salva, some o editor, sem aviso, e a cadeira fica ocupada', async () => {
     const banco = bancoFalso()
     const { ctrl, tela } = await montar(banco)
     const lugar = lugarLivre(0)
@@ -158,7 +158,7 @@ describe('controlador com banco falso', () => {
     expect((await banco.listar()).find(p => p.apelido === 'Ana')?.lugar).toBe(lugar)
     expect(ed.aberto).toBe(false)
     expect(ctrl.aberto).toBe(false)
-    expect(tela.aviso.textContent).toContain('Ana')
+    expect(tela.aviso.hidden).toBe(true)
     expect(tela.mapas.at(-1).get(lugar).apelido).toBe('Ana')
     expect(tela.mais.ligar).toHaveBeenLastCalledWith(true)
   })

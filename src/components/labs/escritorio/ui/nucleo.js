@@ -310,7 +310,9 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
       .concat(novo);
     if (vez === vezEditor) encerrarPainel();
     await recarregar();
-    avisar(anterior && anterior.lugar === novo.lugar
+    /* sentar pela primeira vez não mostra aviso: o boneco na cadeira já diz tudo */
+    if (!anterior) return;
+    avisar(anterior.lugar === novo.lugar
       ? msgEditado(novo.apelido)
       : `Pronto, ${novo.apelido} está sentado. Quem abrir o escritório vai ver você aqui.`);
   }
