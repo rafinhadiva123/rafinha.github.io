@@ -63,7 +63,7 @@ export function modoEditor(lugar, meu, { ocupada = false, mudando = false } = {}
 /* sem zona nem número de bancada na tela; só o nome da área, quando tem */
 const TEXTOS = {
   novo: {
-    titulo: 'Monte seu personagem', botao: 'Sentar aqui', enviando: 'Sentando…',
+    titulo: 'Monte seu personagem', botao: 'Ficar aqui', enviando: 'Salvando…',
     sub: area => `${area ? `${area}. ` : ''}Fica salvo para todo mundo que abrir o escritório.`,
   },
   editar: {
@@ -128,7 +128,6 @@ export function abrirEditor(raiz, {
   atualizarContador();
 
   const grupos = el('div', { classe: 'ed-grupos' });
-  const sortear = el('button', { type: 'button', classe: 'ed-sec', texto: 'Sortear visual', onclick: () => { visual = sortearVisual(aleatorio); desenhar(); avisar(); } });
   const confirmar = el('button', { type: 'submit', classe: 'ed-pri', texto: txt.botao });
   const mudar = modo === 'editar' && typeof mudarCadeira === 'function'
     ? el('button', {
@@ -141,7 +140,7 @@ export function abrirEditor(raiz, {
       },
     })
     : null;
-  const travar = sim => { for (const b of [confirmar, sortear, mudar]) if (b) b.disabled = sim; };
+  const travar = sim => { for (const b of [confirmar, mudar]) if (b) b.disabled = sim; };
 
   const form = el('form', { classe: 'ed-form', novalidate: true, 'aria-labelledby': 'ed-titulo' }, [
     el('div', { classe: 'ed-topo' }, [el('div', {}, [titulo, sub]), btnFechar]),
@@ -151,7 +150,7 @@ export function abrirEditor(raiz, {
       erro,
     ]),
     grupos,
-    el('div', { classe: 'ed-acoes' }, [mudar, sortear, confirmar]),
+    el('div', { classe: 'ed-acoes' }, [mudar, confirmar]),
     modo === 'editar' && excluir ? blocoExcluir() : null,
   ]);
   form.addEventListener('submit', async ev => {
