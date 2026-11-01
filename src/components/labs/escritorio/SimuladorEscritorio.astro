@@ -15,9 +15,13 @@
     <noscript><p class="esc-carregando">O escritório precisa de JavaScript para aparecer.</p></noscript>
   </div>
 
-  <div class="esc-barra" data-esc="barra" hidden role="toolbar" aria-label="Ações do escritório">
-    <button type="button" class="esc-b esc-b--disco" data-acao="discoteca" aria-pressed="false">Discoteca</button>
-    <button type="button" class="esc-b" data-acao="tudo">Ver tudo</button>
+  <div class="esc-barra" data-esc="barra" role="toolbar" aria-label="Ações do escritório">
+    <p class="esc-convite">Procure sua cadeira e se acomode</p>
+    <div class="esc-busca" data-esc="busca"></div>
+    <span class="esc-grupo esc-grupo--fim" data-so3d hidden>
+      <button type="button" class="esc-b esc-b--disco" data-acao="discoteca" aria-pressed="false">Discoteca</button>
+      <button type="button" class="esc-b" data-acao="tudo">Ver tudo</button>
+    </span>
   </div>
 </div>
 
@@ -67,6 +71,26 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
+  }
+
+  .escritorio .esc-convite {
+    margin: 0 6px 0 2px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--texto);
+  }
+
+  .escritorio .esc-busca {
+    width: min(260px, 100%);
+  }
+
+  .escritorio .esc-grupo {
+    display: flex;
+    gap: 6px;
+  }
+
+  .escritorio .esc-grupo--fim {
+    margin-inline-start: auto;
   }
 
   .escritorio .esc-b {
@@ -141,15 +165,20 @@
     background: var(--fundo);
   }
 
-  /* celular: uma linha só, rolando para o lado, para o andar ficar com a tela */
+  /* celular: o convite numa linha, a busca e os botões na de baixo */
   @media (max-width: 560px) {
-    .escritorio .esc-barra {
-      flex-wrap: nowrap;
+    .escritorio .esc-convite {
+      flex-basis: 100%;
     }
 
-    .escritorio .esc-barra {
-      overflow-x: auto;
-      scrollbar-width: none;
+    .escritorio .esc-busca {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+    }
+
+    .escritorio .esc-grupo--fim {
+      margin-inline-start: 0;
     }
 
     .escritorio .esc-b {

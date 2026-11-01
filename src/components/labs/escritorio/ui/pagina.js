@@ -31,6 +31,8 @@ async function criarBanco(local) {
 export async function iniciarPagina(raiz) {
   const palco = raiz.querySelector('[data-esc="palco"]');
   const barra = raiz.querySelector('[data-esc="barra"]');
+  /* a busca por apelido nasce dentro do palco (ui/nucleo.js) e mora na barra */
+  const lugarBusca = raiz.querySelector('[data-esc="busca"]');
   const botao = acao => barra && barra.querySelector(`[data-acao="${acao}"]`);
   const busca = new URLSearchParams(location.search);
   const banco = await criarBanco(busca.has('local'));
@@ -45,13 +47,13 @@ export async function iniciarPagina(raiz) {
     if (esc) { try { esc.parar(); } catch { /* já parou */ } esc = null; }
     palco.replaceChildren();
     palco.className = 'esc-palco';
+    if (lugarBusca) lugarBusca.replaceChildren();
   }
 
   function atualizarBarra() {
     if (!barra) return;
     raiz.dataset.versao = versao;
-    /* os botões só fazem sentido no 3D: na planta a barra some */
-    barra.hidden = versao !== '3d';
+    for (const b of barra.querySelectorAll('[data-so3d]')) b.hidden = versao !== '3d';
     const disco = botao('discoteca');
     if (disco) disco.setAttribute('aria-pressed', 'false');
   }
@@ -88,6 +90,8 @@ export async function iniciarPagina(raiz) {
     } finally {
       palco.removeAttribute('aria-busy');
     }
+    const busca = palco.querySelector(':scope > .bu-raiz');
+    if (busca && lugarBusca) lugarBusca.replaceChildren(busca);
     atualizarBarra();
     const frase = motivo === 'falhou' ? MSG_FALHA_3D : motivo === 'perdeu' ? MSG_PERDEU_3D : MOTIVOS[motivo];
     if (frase) esc.avisar(frase);
