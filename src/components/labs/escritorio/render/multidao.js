@@ -50,6 +50,8 @@ export function criarMultidao(cena) {
   const matCor = () => new THREE.MeshLambertMaterial({ color: 0xffffff });
   let tronco, cabeca, cabelo, pernas, bracos;
   let ocupantes = [];                 /* [{id, p, lugar, indice}] */
+  let reservados = new Set();         /* cadeiras desenhadas pelas piadas */
+  let ultimoMapa = null;
   const porId = new Map();
   const cache = new Map();            /* id -> {grupo, chave, usado} */
   const nomes = new Map();            /* id -> Sprite */
@@ -146,18 +148,26 @@ export function criarMultidao(cena) {
     grupo,
     /** ocupantes: Map(idDoLugar -> personagem) */
     definir(mapa) {
+      ultimoMapa = mapa;
       ocupantes = [];
       porId.clear();
       let k = 0;
       for (const [id, p] of mapa) {
         const lugar = LUGAR.get(id);
         if (!lugar) continue;          /* cadeira que não existe mais no layout */
+        if (reservados.has(id)) continue;   /* quem desenha essa cadeira é a camada de piadas */
         const o = { id, p, lugar, indice: k++ };
         ocupantes.push(o); porId.set(id, o);
       }
       for (const id of [...cache.keys()]) if (!porId.has(id)) descartar(id);
       for (const [id, s] of nomes) if (!porId.has(id)) s.visible = false;
       recriarInstancias();
+    },
+
+    /** Cadeiras que outra camada desenha (as piadas): a multidão pula essas. */
+    reservar(ids) {
+      reservados = new Set(ids);
+      if (ultimoMapa) this.definir(ultimoMapa);
     },
 
     /** Decide quem aparece completo. Devolve true se algo mudou. */

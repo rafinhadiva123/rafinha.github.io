@@ -44,7 +44,7 @@ export const SUBIR = ['arquibancada', 'palquinho'];
 export const PONTOS = {
   saida: { x: 36.9, z: -9.6 },               /* porta da Saída Norte */
   armarioJuridico: { x: 66.3, z: -15.7 },    /* armário alto na parede leste */
-  cafe: { x: 18, z: 7.9 },                   /* bancada de café do Aquário Centro-oeste */
+  quadro: { x: 63.35, z: -19.85 },           /* centro do quadro branco, na parede norte (ele fica de 0,95 a 2,2 m de altura) */
 };
 
 /* Bancadas: eixo 'z' = comprimento no sentido norte-sul (cadeiras a leste e

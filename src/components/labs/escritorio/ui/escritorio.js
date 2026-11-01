@@ -10,12 +10,15 @@
 // - "+" e busca saem do modo boneco antes de agir.
 // - A atualização ao vivo (banco.aoMudar) recarrega a lista sem mexer no editor.
 // - Se o banco não carrega, a planta fica com os 15 fixos e um aviso.
+// - Os 15 fixos são desenhados pela camada de piadas (../piadas), não pela
+//   multidão; a multidão pula essas cadeiras (andar.reservarLugares).
 import '../escritorio.css';
 import { criarAndar } from '../render/andar.js';
 import { criarMais } from './mais.js';
 import { criarBusca } from './busca.js';
 import { criarPasseio } from './passeio.js';
 import { abrirEditor } from './editor.js';
+import { criarPiadas } from '../piadas/index.js';
 import { FIXOS } from '../planta/fixos.js';
 import { LUGAR } from '../planta/lugares.js';
 import { paraBoneco } from '../visual.js';
@@ -70,7 +73,7 @@ export function montarCamadas(palco, { tentarDeNovo = () => {} } = {}) {
   return { camada, busca, editor, aviso, carga, cargaTexto };
 }
 
-const UI_PADRAO = { criarAndar, criarMais, criarBusca, criarPasseio, abrirEditor, montarCamadas };
+const UI_PADRAO = { criarAndar, criarMais, criarBusca, criarPasseio, abrirEditor, montarCamadas, criarPiadas };
 const TEMPO_LIMITE = 10000;   /* ms: leitura que demora mais que isso conta como falha */
 
 /** Espera a promessa, mas desiste depois de ms (pendurar também é falha). */
@@ -129,6 +132,8 @@ export function criarEscritorio(palco, banco, { ui: trocas = {}, tempoLimite = T
     escolher: lugar => abrirPainel(lugar),
   });
   const passeio = ui.criarPasseio(palco, andar, { avisar });
+  /* as piadas dos 15 fixos; no modo boneco o clique é para andar, não para elas */
+  const piadas = ui.criarPiadas(andar, { avisar, bloqueado: () => passeio.ativo });
   ui.criarBusca(c.busca, { pessoas, ir: p => irPara(p.lugar) });
 
   /* quem olha da frente da cadeira: em tela estreita o painel vai para baixo */
@@ -242,6 +247,7 @@ export function criarEscritorio(palco, banco, { ui: trocas = {}, tempoLimite = T
 
   return {
     andar,
+    piadas,
     pronto,
     recarregar,
     get aberto() { return Boolean(editor); },
@@ -252,6 +258,7 @@ export function criarEscritorio(palco, banco, { ui: trocas = {}, tempoLimite = T
       clearTimeout(timerAviso);
       try { if (pararAoMudar) pararAoMudar(); } catch { /* o canal já tinha fechado */ }
       mais.parar();
+      piadas.parar();
     },
   };
 }

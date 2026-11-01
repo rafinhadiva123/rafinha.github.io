@@ -246,6 +246,8 @@ export function criarAndar(palco) {
       multidao.atualizar(camera);
       marcar();
     },
+    /** Cadeiras que a camada de piadas desenha (a multidão não repete). */
+    reservarLugares(ids) { multidao.reservar(ids); marcar(); },
     marcar,
     estatisticas() {
       return {

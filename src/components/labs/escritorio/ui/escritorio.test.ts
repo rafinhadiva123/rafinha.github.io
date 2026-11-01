@@ -76,6 +76,7 @@ function telaFalsa() {
       return {}
     },
     criarPasseio: () => tela.passeio,
+    criarPiadas: () => ({ parar: vi.fn() }),
     abrirEditor: (_raiz: unknown, opc: any) => {
       let aberto = true
       const ed = {

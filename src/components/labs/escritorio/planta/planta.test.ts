@@ -108,7 +108,12 @@ describe('áreas e pontos', () => {
   })
 
   test('os pontos das piadas ficam fora das bancadas', () => {
-    for (const p of Object.values(PONTOS))
-      for (const l of LUGARES) expect(Math.hypot(p.x - l.x, p.z - l.z)).toBeGreaterThan(0.6)
+    /* o quadro é de parede (atrás das cadeiras do norte), não é ponto de piso */
+    for (const [nome, p] of Object.entries(PONTOS))
+      if (nome !== 'quadro') for (const l of LUGARES) expect(Math.hypot(p.x - l.x, p.z - l.z)).toBeGreaterThan(0.6)
+  })
+
+  test('os pontos que as piadas usam existem e o café saiu', () => {
+    expect(Object.keys(PONTOS).sort()).toEqual(['armarioJuridico', 'quadro', 'saida'])
   })
 })
