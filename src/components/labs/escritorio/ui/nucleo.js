@@ -143,9 +143,14 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
     escolher: lugar => abrirPainel(lugar),
     avisar,
   });
-  const passeio = ui.criarPasseio(palco, andar, { avisar });
-  /* as piadas dos 15 fixos; no modo boneco o clique é para andar, não para elas */
-  const piadas = ui.criarPiadas(andar, { avisar, bloqueado: () => passeio.ativo });
+  /* no modo boneco o clique é para andar, menos no armário: a fuga continua valendo */
+  let piadas = null;
+  const passeio = ui.criarPasseio(palco, andar, {
+    avisar,
+    aoClicar: (cx, cy) => Boolean(piadas && piadas.clicarNoPasseio && piadas.clicarNoPasseio(cx, cy)),
+  });
+  /* as piadas dos 15 fixos; no modo boneco o clique é do passeio (ver acima) */
+  piadas = ui.criarPiadas(andar, { avisar, bloqueado: () => passeio.ativo });
   ui.criarBusca(c.busca, { pessoas, ir: p => irPara(p.lugar) });
 
   /* quem olha da frente da cadeira: em tela estreita o painel vai para baixo */

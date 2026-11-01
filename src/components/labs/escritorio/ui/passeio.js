@@ -35,8 +35,10 @@ function el(tag, attrs = {}, html) {
  * @param andar   o que criarAndar devolve
  * @param opcoes.avisar(texto)  mensagem curta na tela
  * @param opcoes.aoMudar(ativo) entrou ou saiu do modo boneco
+ * @param opcoes.aoClicar(cx, cy) clique sem arrastar; true se ele foi usado
+ *                        (o armário da fuga, por exemplo) e o boneco não anda
  */
-export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => {} } = {}) {
+export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => {}, aoClicar = () => false } = {}) {
   const g = andar.colisao, camera = andar.camera, alvo = andar.controles.target;
   const toqueFino = matchMedia('(pointer: fine)');
 
@@ -271,7 +273,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     if (!ativo || !apertou) return;
     const clique = Math.hypot(e.clientX - apertou.x, e.clientY - apertou.y) < 8;
     apertou = null; olhar = null;
-    if (clique) andarAte(e.clientX, e.clientY);
+    if (clique && !aoClicar(e.clientX, e.clientY)) andarAte(e.clientX, e.clientY);
   });
   canvas.addEventListener('pointercancel', () => { olhar = null; apertou = null; });
 

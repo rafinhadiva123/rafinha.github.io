@@ -67,18 +67,25 @@ export function criarPiadas(andar, { avisar = () => {}, bloqueado = () => false,
   const raio = new THREE.Raycaster();
   let aperto = null;
   const abaixo = e => { aperto = { x: e.clientX, y: e.clientY, t: performance.now() }; };
+  /** Dispara a piada do que está em (cx, cy). Devolve true se acertou alguma coisa. */
+  function clicarEm(cx, cy, { soMoveis = false } = {}) {
+    const o = andar.raioEm(cx, cy);
+    raio.set(new THREE.Vector3(o.origem.x, o.origem.y, o.origem.z), new THREE.Vector3(o.direcao.x, o.direcao.y, o.direcao.z).normalize());
+    const alvos = soMoveis ? motor.alvosClique : [...pessoas.map(p => p.g), ...motor.alvosClique];
+    const hit = raio.intersectObjects(alvos, true)[0];
+    if (!hit) return false;
+    const r = motor.clicar(hit.object);
+    if (r && r.msg) avisar(r.msg);
+    return Boolean(r);
+  }
   const acima = e => {
     if (!aperto) return;
     const movido = Math.hypot(e.clientX - aperto.x, e.clientY - aperto.y);
     const demora = performance.now() - aperto.t;
     aperto = null;
+    /* no modo boneco quem decide o clique é o passeio (ele chama clicarNoPasseio) */
     if (movido > 6 || demora > 500 || bloqueado()) return;
-    const o = andar.raioEm(e.clientX, e.clientY);
-    raio.set(new THREE.Vector3(o.origem.x, o.origem.y, o.origem.z), new THREE.Vector3(o.direcao.x, o.direcao.y, o.direcao.z).normalize());
-    const hit = raio.intersectObjects([...pessoas.map(p => p.g), ...motor.alvosClique], true)[0];
-    if (!hit) return;
-    const r = motor.clicar(hit.object);
-    if (r && r.msg) avisar(r.msg);
+    clicarEm(e.clientX, e.clientY);
   };
   if (tela) {
     tela.addEventListener('pointerdown', abaixo);
@@ -94,6 +101,8 @@ export function criarPiadas(andar, { avisar = () => {}, bloqueado = () => false,
     sanduiche() { return resposta(motor.comerSanduiche(porNome('Lika'))); },
     /** O homem do armário do jurídico foge até a Saída Norte; o perseguidor sai atrás. */
     fuga() { return resposta(motor.iniciarFuga()); },
+    /** Clique no modo boneco: só o armário (a fuga) vale; true se acertou, e aí o boneco não anda. */
+    clicarNoPasseio(cx, cy) { return clicarEm(cx, cy, { soMoveis: true }); },
     /** Liga ou desliga a discoteca; devolve true se ligou. */
     discoteca() { return motor.alternarDisco(); },
     /** Manda uma personagem fixa para outra cadeira (a piada vai junto). */
