@@ -7,11 +7,14 @@ import '../styles/global.css'
 interface Props {
   titulo: string
   descricao?: string
+  /** página de teste: fora dos buscadores */
+  noindex?: boolean
 }
 
 const {
   titulo,
   descricao = 'Laboratório de experimentos interativos de Rafaella.',
+  noindex = false,
 } = Astro.props
 
 const canonical = new URL(Astro.url.pathname, Astro.site)
@@ -24,6 +27,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{titulo}</title>
     <meta name="description" content={descricao} />
+    {noindex && <meta name="robots" content="noindex" />}
     <link rel="canonical" href={canonical} />
 
     <meta property="og:type" content="website" />

@@ -9,5 +9,10 @@ import sitemap from '@astrojs/sitemap';
 export default defineConfig({
   site: 'https://rafinha.xyz',
   // sem `base`: domínio próprio no apex
-  integrations: [mdx(), react(), sitemap()],
+  integrations: [
+    mdx(),
+    react(),
+    // a página de teste do escritório fica fora do sitemap
+    sitemap({ filter: pagina => !pagina.includes('/labs/escritorio-teste') }),
+  ],
 });
