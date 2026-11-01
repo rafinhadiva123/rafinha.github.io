@@ -14,23 +14,6 @@
     <p class="esc-carregando">Carregando o escritório…</p>
     <noscript><p class="esc-carregando">O escritório precisa de JavaScript para aparecer.</p></noscript>
   </div>
-
-  <div class="esc-barra" data-esc="barra" role="toolbar" aria-label="Ações do escritório">
-    <button type="button" class="esc-b esc-b--pri" data-acao="sentar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"></path></svg>
-      Sentar numa cadeira livre
-    </button>
-    <span class="esc-grupo" data-so3d hidden>
-      <button type="button" class="esc-b" data-acao="sanduiche">Sanduíche da Lika</button>
-      <button type="button" class="esc-b" data-acao="fuga">Fuga do armário</button>
-      <button type="button" class="esc-b esc-b--disco" data-acao="discoteca" aria-pressed="false">Discoteca</button>
-    </span>
-    <span class="esc-grupo esc-grupo--fim">
-      <button type="button" class="esc-b" data-acao="tudo" data-so3d hidden>Ver tudo</button>
-      <button type="button" class="esc-b" data-acao="cima" data-so3d hidden>Ver de cima</button>
-      <button type="button" class="esc-b" data-acao="versao">Ver sem 3D</button>
-    </span>
-  </div>
 </div>
 
 <script>
@@ -73,98 +56,7 @@
     color: var(--texto-suave);
   }
 
-  /* barra de ações, fora do canvas: não briga com a busca, o boneco e os avisos */
-  .escritorio .esc-barra {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .escritorio .esc-grupo {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .escritorio .esc-grupo--fim {
-    margin-inline-start: auto;
-  }
-
-  .escritorio .esc-b {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 34px;
-    padding: 6px 12px;
-    border: 1px solid color-mix(in srgb, var(--borda), var(--texto) 18%);
-    border-radius: 6px;
-    background: var(--superficie);
-    color: var(--texto);
-    font: inherit;
-    font-size: 0.85rem;
-    line-height: 1.1;
-    cursor: pointer;
-  }
-
-  .escritorio .esc-b svg {
-    width: 15px;
-    height: 15px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2.4;
-    stroke-linecap: round;
-  }
-
-  .escritorio .esc-b:hover:not(:disabled) {
-    border-color: var(--destaque);
-    color: var(--destaque);
-  }
-
-  .escritorio .esc-b:focus-visible {
-    outline: 2px solid var(--destaque);
-    outline-offset: 2px;
-  }
-
-  .escritorio .esc-b:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
-  .escritorio .esc-b--pri {
-    background: var(--destaque);
-    border-color: var(--destaque);
-    color: var(--fundo);
-    font-weight: 600;
-  }
-
-  .escritorio .esc-b--pri:hover:not(:disabled) {
-    color: var(--fundo);
-    filter: brightness(1.08);
-  }
-
-  .escritorio .esc-b--disco[aria-pressed='true'] {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(90deg, #c2185b, #7b2cbf, #1565c0, #2e7d32, #c2185b);
-    background-size: 300% 100%;
-    animation: escritorio-arcoiris 2.4s linear infinite;
-  }
-
-  @keyframes escritorio-arcoiris {
-    to {
-      background-position: 300% 0;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .escritorio .esc-b--disco[aria-pressed='true'] {
-      animation: none;
-    }
-  }
-
-  /* modo tela inteira (largura: 'tela'): o andar ocupa a janela e a barra
-     fica embaixo dele */
+  /* modo tela inteira (largura: 'tela'): o andar ocupa a janela */
   body:has(.experimento__corpo--tela) {
     overflow-x: clip;
   }
@@ -181,35 +73,5 @@
     height: auto;
     border: 0;
     border-radius: 0;
-  }
-
-  .experimento__corpo--tela .escritorio .esc-barra {
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--borda);
-    background: var(--fundo);
-  }
-
-  /* celular: uma linha só, rolando para o lado, para o andar ficar com a tela */
-  @media (max-width: 560px) {
-    .escritorio .esc-barra,
-    .escritorio .esc-grupo {
-      flex-wrap: nowrap;
-    }
-
-    .escritorio .esc-barra {
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .escritorio .esc-b {
-      flex: none;
-      padding: 6px 10px;
-      font-size: 0.8rem;
-      white-space: nowrap;
-    }
-
-    .escritorio .esc-grupo--fim {
-      margin-inline-start: 0;
-    }
   }
 </style>
