@@ -227,8 +227,8 @@ export function criarPlanta(palco) {
   aplicarEscala(false);
 
   /* centro da cadeira na área rolável, em pixels */
-  /* (o SVG tem 12 px de folga à esquerda e 56 px em cima, para a busca) */
-  const pixel = l => ({ x: (l.x - x0) * escala + 12, y: (l.z - z0) * escala + 56 });
+  /* (o SVG tem 12 px de folga à esquerda e em cima) */
+  const pixel = l => ({ x: (l.x - x0) * escala + 12, y: (l.z - z0) * escala + 12 });
 
   function centrar(id, painel, suave = !reduz) {
     const l = LUGAR.get(id);
@@ -254,7 +254,7 @@ export function criarPlanta(palco) {
     c.g.focus({ preventScroll: true });
     /* traz para a vista só se saiu dela */
     const r = c.g.getBoundingClientRect(), v = rolagem.getBoundingClientRect();
-    if (r.left < v.left + 8 || r.right > v.right - 8 || r.top < v.top + 56 || r.bottom > v.bottom - 8) centrar(id, null);
+    if (r.left < v.left + 8 || r.right > v.right - 8 || r.top < v.top + 8 || r.bottom > v.bottom - 8) centrar(id, null);
   }
 
   const DIRECOES = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };

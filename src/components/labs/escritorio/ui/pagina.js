@@ -6,7 +6,7 @@
 //
 // ?planta abre a versão sem 3D, ?3d força o 3D, ?local usa o banco deste
 // navegador (sem rede, para testar).
-import { versaoDoAparelho, guardarPreferencia, testarWebGL, MOTIVOS } from './capacidade.js';
+import { versaoDoAparelho, guardarPreferencia, MOTIVOS } from './capacidade.js';
 
 const MSG_FALHA_3D = 'Não deu para abrir o 3D aqui, então abrimos a planta vista de cima.';
 const MSG_PERDEU_3D = 'O 3D parou de responder neste aparelho, então trocamos para a planta vista de cima.';
@@ -31,6 +31,8 @@ async function criarBanco(local) {
 export async function iniciarPagina(raiz) {
   const palco = raiz.querySelector('[data-esc="palco"]');
   const barra = raiz.querySelector('[data-esc="barra"]');
+  /* a busca por apelido nasce dentro do palco (ui/nucleo.js) e mora na barra */
+  const lugarBusca = raiz.querySelector('[data-esc="busca"]');
   const botao = acao => barra && barra.querySelector(`[data-acao="${acao}"]`);
   const busca = new URLSearchParams(location.search);
   const banco = await criarBanco(busca.has('local'));
@@ -45,6 +47,7 @@ export async function iniciarPagina(raiz) {
     if (esc) { try { esc.parar(); } catch { /* já parou */ } esc = null; }
     palco.replaceChildren();
     palco.className = 'esc-palco';
+    if (lugarBusca) lugarBusca.replaceChildren();
   }
 
   function atualizarBarra() {
@@ -53,13 +56,6 @@ export async function iniciarPagina(raiz) {
     for (const b of barra.querySelectorAll('[data-so3d]')) b.hidden = versao !== '3d';
     const disco = botao('discoteca');
     if (disco) disco.setAttribute('aria-pressed', 'false');
-    const troca = botao('versao');
-    if (troca) {
-      const semWebgl = versao === 'planta' && !testarWebGL().ok;
-      troca.textContent = versao === '3d' ? 'Ver sem 3D' : 'Ver em 3D';
-      troca.disabled = semWebgl;
-      troca.title = semWebgl ? 'Este navegador não mostra 3D' : '';
-    }
   }
 
   async function montar(v, motivo = null) {
@@ -94,6 +90,8 @@ export async function iniciarPagina(raiz) {
     } finally {
       palco.removeAttribute('aria-busy');
     }
+    const busca = palco.querySelector(':scope > .bu-raiz');
+    if (busca && lugarBusca) lugarBusca.replaceChildren(busca);
     atualizarBarra();
     const frase = motivo === 'falhou' ? MSG_FALHA_3D : motivo === 'perdeu' ? MSG_PERDEU_3D : MOTIVOS[motivo];
     if (frase) esc.avisar(frase);
@@ -112,14 +110,9 @@ export async function iniciarPagina(raiz) {
       const b = ev.target.closest && ev.target.closest('[data-acao]');
       if (!b || !esc) return;
       const acao = b.dataset.acao;
-      if (acao === 'sentar') esc.sentarEmLivre();
-      else if (acao === 'versao') trocar(versao === '3d' ? 'planta' : '3d');
-      else if (versao !== '3d') return;
-      else if (acao === 'sanduiche') esc.piadas.sanduiche();
-      else if (acao === 'fuga') esc.piadas.fuga();
-      else if (acao === 'discoteca') b.setAttribute('aria-pressed', String(Boolean(esc.piadas.discoteca())));
+      if (versao !== '3d') return;
+      if (acao === 'discoteca') b.setAttribute('aria-pressed', String(Boolean(esc.piadas.discoteca())));
       else if (acao === 'tudo') esc.andar.vista3d();
-      else if (acao === 'cima') esc.andar.vistaTopo();
     });
   }
 
