@@ -35,10 +35,14 @@
   color: var(--destaque, #24306b);
   cursor: pointer; pointer-events: auto;
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
-  transition: background 0.12s ease, color 0.12s ease, scale 0.12s ease;
+  /* a posição na tela vem em `translate` (ui/mais.js); centralizar e crescer
+     ficam no transform, que é aplicado antes dela: assim o zoom do hover é em
+     volta do próprio botão e ele não foge do mouse */
+  transform: translate(-50%, -50%);
+  transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
 }
 .esc-palco .mais svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
-.esc-palco .mais:hover { background: var(--destaque, #24306b); color: var(--fundo, #fff); scale: 1.12; }
+.esc-palco .mais:hover { background: var(--destaque, #24306b); color: var(--fundo, #fff); transform: translate(-50%, -50%) scale(1.12); }
 .esc-palco .mais:focus-visible { outline: 2px solid var(--destaque, #24306b); outline-offset: 3px; }
 
 /* ---- busca por apelido ---- */

@@ -82,7 +82,7 @@ export function criarMais(camada, andar, { ocupados, escolher }) {
       const l = LUGAR.get(id), b = pool[k];
       const p = andar.projetar(l.x, ALTURA + (l.dy || 0), l.z);
       b.hidden = !p.visivel;
-      if (p.visivel) b.style.transform = `translate(${p.x}px,${p.y}px) translate(-50%,-50%)`;
+      if (p.visivel) b.style.translate = `${p.x}px ${p.y}px`;
     });
   }
   const parar = andar.aoDesenhar(posicionar);
