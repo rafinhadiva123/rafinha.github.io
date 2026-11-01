@@ -1,17 +1,19 @@
 // O andar em 3D: cenário mesclado, móveis instanciados, multidão com dois
-// níveis de detalhe e câmera orbital. Só redesenha quando alguma coisa muda
+// níveis de detalhe e câmera orbital. As zonas da planta não aparecem na
+// tela; o que vai por cima do canvas (botões "+", busca) é da pasta ui/ e
+// se reposiciona pelo aviso `aoDesenhar`. Só redesenha quando alguma coisa muda
 // (câmera mexendo, animação rodando, gente sentando); parado, não gasta
 // bateria. A sombra é calculada uma vez, porque nada que faz sombra se mexe.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { ZONAS } from '../planta/dados.js';
 import { LUGARES, LUGAR } from '../planta/lugares.js';
 import { montarCenario } from './cenario.js';
 import { mesclarEstatico } from './estatico.js';
 import { montarMoveis } from './moveis.js';
 import { criarMultidao } from './multidao.js';
+import { montarColisao } from './colisao.js';
 
-export function criarAndar(palco, { rotulos } = {}) {
+export function criarAndar(palco) {
   const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
@@ -30,6 +32,7 @@ export function criarAndar(palco, { rotulos } = {}) {
   controles.minDistance = 2.5;
   controles.maxDistance = 180;
   controles.screenSpacePanning = false;
+  controles.zoomSpeed = 1.4;          /* chega perto do chão com menos giros da roda */
 
   let sujo = true;
   const marcar = () => { sujo = true; };
@@ -57,6 +60,8 @@ export function criarAndar(palco, { rotulos } = {}) {
   /* cenário fixo, mesclado por material */
   const mundo = new THREE.Group();
   const { M } = montarCenario(mundo);
+  /* o mapa do modo boneco sai das peças antes de elas virarem uma malha só */
+  const colisao = montarColisao(mundo);
   const mescla = mesclarEstatico(mundo);
   cena.add(mundo);
   cena.add(montarMoveis(M));
@@ -71,24 +76,14 @@ export function criarAndar(palco, { rotulos } = {}) {
   cena.add(anel);
   renderer.shadowMap.needsUpdate = true;
 
-  /* rótulos das zonas (HTML por cima do canvas) */
-  const zonas = ZONAS.map(z => {
-    const c = new THREE.Vector3((z.r[0] + z.r[2]) / 2, 3.6, (z.r[1] + z.r[3]) / 2);
-    let el = null;
-    if (rotulos) {
-      el = document.createElement('div');
-      el.className = 'lbl';
-      el.textContent = z.nome;
-      rotulos.appendChild(el);
-    }
-    return { ...z, c, el };
-  });
-
   /* câmera: voo suave entre vistas */
   let voo = null, modo = '3d';
   function voarPara(pos, alvo, ms) {
-    voo = { p0: camera.position.clone(), t0: controles.target.clone(), p1: pos, t1: alvo, ini: performance.now(), ms: reduz ? 0 : ms || 900 };
-    marcar();
+    if (voo && voo.fim) voo.fim();
+    return new Promise(fim => {
+      voo = { p0: camera.position.clone(), t0: controles.target.clone(), p1: pos, t1: alvo, ini: performance.now(), ms: reduz ? 0 : ms || 900, fim };
+      marcar();
+    });
   }
   const posInicial = () => {
     const k = Math.max(1, Math.pow(1.4 / Math.max(camera.aspect, 0.3), 0.85));
@@ -122,18 +117,46 @@ export function criarAndar(palco, { rotulos } = {}) {
     voarPara(pos, alvo, 1000);
   }
 
-  /** Qual cadeira está embaixo do ponto da tela (clientX, clientY), ou null. */
-  const raio = new THREE.Raycaster(), plano = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5), acerto = new THREE.Vector3();
-  function lugarEm(cx, cy) {
+  /** Ponto do chão embaixo do ponto da tela (clientX, clientY), ou null. */
+  const raio = new THREE.Raycaster(), acerto = new THREE.Vector3();
+  const chao = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), assento = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
+  function raioDaTela(cx, cy) {
     const r = renderer.domElement.getBoundingClientRect();
     raio.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), camera);
-    if (!raio.ray.intersectPlane(plano, acerto)) return null;
+  }
+  /** Raio que sai da câmera pelo ponto da tela: {origem, direcao} ({x,y,z}). */
+  function raioEm(cx, cy) {
+    raioDaTela(cx, cy);
+    const o = raio.ray.origin, d = raio.ray.direction;
+    return { origem: { x: o.x, y: o.y, z: o.z }, direcao: { x: d.x, y: d.y, z: d.z } };
+  }
+  function pontoNoChao(cx, cy) {
+    raioDaTela(cx, cy);
+    return raio.ray.intersectPlane(chao, acerto) ? { x: acerto.x, z: acerto.z } : null;
+  }
+
+  /** Qual cadeira está embaixo do ponto da tela (clientX, clientY), ou null. */
+  function lugarEm(cx, cy) {
+    raioDaTela(cx, cy);
+    if (!raio.ray.intersectPlane(assento, acerto)) return null;
     let melhor = null, d = 0.7;
     for (const l of LUGARES) {
       const e = Math.hypot(l.x - acerto.x, l.z - acerto.z);
       if (e < d) { d = e; melhor = l.id; }
     }
     return melhor;
+  }
+
+  /** Ponto 3D → pixels dentro do palco; visivel=false se está atrás ou fora. */
+  const proj = new THREE.Vector3();
+  function projetar(x, y, z) {
+    proj.set(x, y, z).project(camera);
+    const w = palco.clientWidth, h = palco.clientHeight;
+    return {
+      x: ((proj.x + 1) / 2) * w,
+      y: ((1 - proj.y) / 2) * h,
+      visivel: proj.z < 1 && proj.x > -1.05 && proj.x < 1.05 && proj.y > -1.05 && proj.y < 1.05,
+    };
   }
 
   function selecionar(id) {
@@ -157,21 +180,26 @@ export function criarAndar(palco, { rotulos } = {}) {
   controles.update();
 
   /* laço: só desenha quando está sujo */
-  const v = new THREE.Vector3();
+  const aoDesenharFns = new Set();
+  let livre = null;          /* modo boneco: quem mexe a câmera é ele, não a órbita */
+  let anterior = performance.now();
   let ultimaLod = 0, camMudou = true, quadros = 0, fps = 0, t0fps = performance.now();
   const ultimaPos = new THREE.Vector3(), ultimoAlvo = new THREE.Vector3();
   function laco(agora) {
     requestAnimationFrame(laco);
+    const dt = Math.min(0.1, (agora - anterior) / 1000);
+    anterior = agora;
     if (voo) {
       const k = voo.ms ? Math.min((agora - voo.ini) / voo.ms, 1) : 1;
       const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       camera.position.lerpVectors(voo.p0, voo.p1, e);
       controles.target.lerpVectors(voo.t0, voo.t1, e);
-      if (k >= 1) { voo = null; if (modo === 'topo') controles.maxPolarAngle = 0.0001; }
+      if (k >= 1) { const fim = voo.fim; voo = null; if (modo === 'topo') controles.maxPolarAngle = 0.0001; fim(); }
       else if (modo !== 'topo') controles.maxPolarAngle = 1.45;
       marcar();
     }
-    controles.update();
+    if (livre && !voo) { if (livre(dt)) marcar(); }
+    else controles.update();
     if (!camera.position.equals(ultimaPos) || !controles.target.equals(ultimoAlvo)) {
       camMudou = true; ultimaPos.copy(camera.position); ultimoAlvo.copy(controles.target);
     }
@@ -185,22 +213,31 @@ export function criarAndar(palco, { rotulos } = {}) {
     renderer.render(cena, camera);
     quadros++;
     if (agora - t0fps > 1000) { fps = Math.round((quadros * 1000) / (agora - t0fps)); quadros = 0; t0fps = agora; }
-
-    if (rotulos) {
-      const w = palco.clientWidth, h = palco.clientHeight;
-      for (const z of zonas) {
-        v.copy(z.c); if (modo === 'topo') v.y = 0.2; v.project(camera);
-        const vis = v.z < 1 && v.x > -1.1 && v.x < 1.1 && v.y > -1.1 && v.y < 1.1;
-        z.el.hidden = !vis;
-        if (vis) z.el.style.transform = `translate(${((v.x + 1) / 2) * w}px,${((1 - v.y) / 2) * h}px) translate(-50%,-100%)`;
-      }
-    }
+    /* o que fica por cima do canvas acompanha o quadro desenhado */
+    for (const fn of aoDesenharFns) fn();
   }
   requestAnimationFrame(laco);
 
   return {
     renderer, cena, camera, controles, multidao,
-    vista3d, vistaTopo, irPara, olharPara, lugarEm, selecionar,
+    vista3d, vistaTopo, irPara, olharPara, lugarEm, pontoNoChao, raioEm, projetar, selecionar,
+    /** Distância da câmera até o ponto que ela olha: pequena = perto do chão. */
+    distancia() { return camera.position.distanceTo(controles.target); },
+    alvo() { return { x: controles.target.x, z: controles.target.z }; },
+    get voando() { return Boolean(voo); },
+    /** Voo da câmera até pos olhando alvo (THREE.Vector3); resolve ao chegar. */
+    voar(pos, alvo, ms) { return voarPara(pos, alvo, ms); },
+    /** Modo boneco: fn(dt) mexe camera e controles.target e devolve true se
+        mudou algo. null devolve a câmera para a órbita. */
+    assumirCamera(fn) {
+      livre = fn;
+      controles.enabled = !fn;
+      if (!fn) { modo = '3d'; controles.maxPolarAngle = 1.45; controles.update(); }
+      marcar();
+    },
+    colisao,
+    /** fn() roda depois de cada quadro desenhado; devolve "parar". */
+    aoDesenhar(fn) { aoDesenharFns.add(fn); marcar(); return () => aoDesenharFns.delete(fn); },
     focar(id) { multidao.definirFoco(id); camMudou = true; marcar(); },
     /** Map(idDoLugar -> personagem) */
     definirOcupantes(mapa) {

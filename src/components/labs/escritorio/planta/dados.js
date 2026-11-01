@@ -37,6 +37,9 @@ export const AREAS = [
   { id: 'armario-bancada-norte', nome: 'Armário bancada Norte', r: [10.4, -19.4, 11.6, -5.2] },
 ];
 
+/* Áreas onde o boneco sobe (modo boneco): as peças largas delas viram chão. */
+export const SUBIR = ['arquibancada', 'palquinho'];
+
 /* Pontos com nome que as piadas usam (nunca coordenadas soltas no código). */
 export const PONTOS = {
   saida: { x: 36.9, z: -9.6 },               /* porta da Saída Norte */
