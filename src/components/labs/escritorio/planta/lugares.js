@@ -1,10 +1,10 @@
 // Gera as cadeiras a partir das bancadas, cada uma com um nome fixo:
 //   <zona>-<bancada>-<lado>-<posição>   ex.: leste-1-N-1, nordeste-2-L-4
-// bancada: numerada dentro da zona, do norte para o sul e, empatando, do
-//          oeste para o leste;
+// bancada: o número n escrito em cada bancada (planta/dados.js), único
+//          dentro da zona e que nunca muda;
 // lado:    N/S nas bancadas de eixo x, O/L nas de eixo z;
 // posição: oeste→leste nas de eixo x, norte→sul nas de eixo z.
-// Mover uma bancada só muda coordenadas: o nome das cadeiras continua.
+// Mover ou acrescentar bancada não muda o nome de nenhuma cadeira que já existe.
 import { BANCADAS, BANCADA, ZONAS, AREAS, AVULSAS } from './dados.js';
 
 export function gerarLugares(bancadas = BANCADAS, avulsas = AVULSAS) {
@@ -16,9 +16,9 @@ export function gerarLugares(bancadas = BANCADAS, avulsas = AVULSAS) {
 
   const lugares = [];
   for (const [zona, lista] of porZona) {
-    lista.sort((a, b) => a.z - b.z || a.x - b.x);
-    lista.forEach((b, k) => {
-      const n = k + 1;
+    lista.sort((a, b) => a.n - b.n);
+    lista.forEach(b => {
+      const n = b.n;
       const comprimento = b.lugares * BANCADA.passo;
       for (const s of [-1, 1]) {
         for (let i = 0; i < b.lugares; i++) {

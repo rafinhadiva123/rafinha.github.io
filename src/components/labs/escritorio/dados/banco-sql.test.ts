@@ -5,9 +5,9 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { unaccent } from '@electric-sql/pglite/contrib/unaccent'
-import { gerarSql } from './sql.js'
+import { gerarSql, gerarSqlBackupCopiar, gerarSqlBackupRestaurar, MARCA_COLAR, cadeirasDoSql, sqlPreviaLayout } from './sql.js'
 import { PADRAO } from '../visual.js'
-import { TOTAL_LUGARES } from '../planta/lugares.js'
+import { TOTAL_LUGARES, LUGARES } from '../planta/lugares.js'
 
 const SUPABASE_FALSO = `
   create role anon nologin;
@@ -49,9 +49,15 @@ beforeAll(async () => {
 }, 60000)
 
 describe('arquivo SQL', () => {
-  test('supabase/escritorio.sql está em dia com a planta', () => {
-    const arquivo = readFileSync(new URL('../../../../../supabase/escritorio.sql', import.meta.url), 'utf8')
-    expect(arquivo).toBe(gerarSql())
+  test('os arquivos de supabase/ estão em dia com a planta', () => {
+    const ler = (nome: string) => readFileSync(new URL(`../../../../../supabase/${nome}`, import.meta.url), 'utf8')
+    expect(ler('escritorio.sql')).toBe(gerarSql())
+    expect(ler('escritorio-backup-copiar.sql')).toBe(gerarSqlBackupCopiar())
+    expect(ler('escritorio-backup-restaurar.sql')).toBe(gerarSqlBackupRestaurar())
+  })
+
+  test('a prévia de layout lê de volta as cadeiras publicadas', () => {
+    expect(cadeirasDoSql(gerarSql())).toEqual(LUGARES.map(l => l.id))
   })
 
   test('a conferência do final diz "tudo certo"', async () => {
@@ -154,5 +160,114 @@ describe('tempo real', () => {
   test('a tabela de personagens está na publicação do Supabase', async () => {
     const r = await db.query(`select tablename from pg_publication_tables where pubname = 'supabase_realtime'`)
     expect(r.rows).toEqual([{ tablename: 'escritorio_personagens' }])
+  })
+})
+
+const C = '33333333-3333-3333-3333-333333333333'
+const D = '44444444-4444-4444-4444-444444444444'
+const E = '55555555-5555-5555-5555-555555555555'
+const meu = async (uid: string) =>
+  (await como('authenticated', uid, 'select public.escritorio_meu() as m')).rows[0] as { m: { lugar: string; apelido: string } | null }
+const linha = async (apelido: string) =>
+  (await db.query<{ lugar: string | null; dono: string | null }>(
+    `select p.lugar, d.dono from public.escritorio_personagens p left join public.escritorio_donos d on d.personagem = p.id where p.apelido = $1`, [apelido])).rows
+
+describe('excluir o próprio personagem', () => {
+  test('sem login não exclui', async () => {
+    expect(await erroDe(como('anon', null, 'select public.escritorio_sair()'))).toMatch(/permission denied/)
+    expect(await erroDe(como('authenticated', null, 'select public.escritorio_sair()'))).toBe('sem_sessao')
+  })
+
+  test('exclui só o meu: cadeira e apelido ficam livres, os outros continuam', async () => {
+    await sentar(C, 'sul-7-L-1', 'Cacá')
+    await sentar(D, 'sul-7-L-2', 'Dedé')
+    const r = await como('authenticated', C, 'select public.escritorio_sair() as r')
+    expect((r.rows[0] as { r: boolean }).r).toBe(true)
+    expect(await linha('Cacá')).toEqual([])
+    expect((await meu(C)).m).toBeNull()
+    expect(await linha('Dedé')).toEqual([{ lugar: 'sul-7-L-2', dono: D }])
+    /* outra pessoa pode usar o apelido e a cadeira; quem saiu pode voltar */
+    await sentar(E, 'sul-7-L-1', 'cacá')
+    await sentar(C, 'sul-7-L-3', 'Cacá de volta')
+    expect((await meu(C)).m).toMatchObject({ lugar: 'sul-7-L-3', apelido: 'Cacá de volta' })
+  })
+
+  test('quem não tem personagem não apaga nada; fixo nunca sai', async () => {
+    const r = await como('authenticated', '66666666-6666-6666-6666-666666666666', 'select public.escritorio_sair() as r')
+    expect((r.rows[0] as { r: boolean }).r).toBe(false)
+    const fixos = await db.query<{ n: number }>('select count(*)::int as n from public.escritorio_personagens where fixo')
+    expect(fixos.rows[0].n).toBe(15)
+  })
+})
+
+describe('mudança de layout com cadeira de fixo ocupada', () => {
+  test('o SQL para com o nome de quem está lá e não muda nada', async () => {
+    /* imita um layout em que a cadeira do Gabi ficou com um visitante */
+    await db.exec(`update public.escritorio_personagens set lugar = null where apelido = 'Gabi'`)
+    await db.exec(`update public.escritorio_personagens set lugar = 'leste-1-N-1' where apelido = 'Dedé'`)
+    await db.exec('drop function public.escritorio_sair()')
+    const msg = await erroDe(db.exec(gerarSql()))
+    expect(msg).toMatch(/parei sem mudar nada/)
+    expect(msg).toMatch(/leste-1-N-1 \(do fixo Gabi\) está com Dedé/)
+    /* a função recriada lá no começo do script também foi desfeita */
+    const f = await db.query(`select 1 from pg_proc where proname = 'escritorio_sair'`)
+    expect(f.rows).toEqual([])
+    expect(await linha('Gabi')).toEqual([{ lugar: null, dono: null }])
+    /* a prévia de layout aponta o problema antes */
+    const previa = await db.query<{ situacao: string; apelido: string }>(sqlPreviaLayout([]))
+    expect(previa.rows).toEqual([expect.objectContaining({ apelido: 'Dedé', situacao: expect.stringMatching(/ATENÇÃO/) })])
+    /* arrumando, roda de novo e tudo volta */
+    await db.exec(`update public.escritorio_personagens set lugar = 'sul-7-L-2' where apelido = 'Dedé'`)
+    await db.exec(gerarSql())
+    expect(await linha('Gabi')).toEqual([{ lugar: 'leste-1-N-1', dono: null }])
+  })
+})
+
+describe('backup', () => {
+  const copiar = async () => (await db.query<{ copia: string }>(gerarSqlBackupCopiar())).rows[0].copia
+  const restaurar = async (copia: string) => {
+    const r = await db.exec(gerarSqlBackupRestaurar().replace(MARCA_COLAR, copia))
+    return Object.fromEntries(r[r.length - 1].rows.map((x: any) => [x.situacao, x.apelidos]))
+  }
+
+  test('copiar só lê e não leva os fixos', async () => {
+    const j = JSON.parse(await copiar())
+    expect(j.tipo).toBe('escritorio-backup')
+    expect(j.personagens.some((p: any) => p.apelido === 'Dedé')).toBe(true)
+    expect(j.personagens.some((p: any) => p.apelido === 'Gabi')).toBe(false)
+    expect(j.donos.length).toBe(j.personagens.length)
+  })
+
+  test('apagou sem querer: restaura com cadeira e dono; rodar de novo não duplica', async () => {
+    const copia = await copiar()
+    const antes = (await db.query('select count(*)::int as n from public.escritorio_personagens')).rows
+    await db.exec(`delete from public.escritorio_personagens where apelido in ('Dedé', 'Cacá de volta')`)
+    const r = await restaurar(copia)
+    expect(r['voltou para a cadeira dele']).toBe('Cacá de volta, Dedé')
+    expect(await linha('Dedé')).toEqual([{ lugar: 'sul-7-L-2', dono: D }])
+    expect((await meu(C)).m).toMatchObject({ apelido: 'Cacá de volta' })
+    expect((await db.query('select count(*)::int as n from public.escritorio_personagens')).rows).toEqual(antes)
+    const r2 = await restaurar(copia)
+    expect(Object.keys(r2)).toEqual(['já estava no banco'])
+    expect((await db.query('select count(*)::int as n from public.escritorio_personagens')).rows).toEqual(antes)
+  })
+
+  test('cadeira tomada volta sem cadeira; apelido tomado é pulado; navegador com outro personagem fica sem dono', async () => {
+    const copia = await copiar()
+    await db.exec(`delete from public.escritorio_personagens where apelido in ('Dedé', 'Cacá de volta')`)
+    await sentar('77777777-7777-7777-7777-777777777777', 'sul-7-L-2', 'Intruso')     /* cadeira do Dedé */
+    await sentar('88888888-8888-8888-8888-888888888888', 'sul-8-L-1', 'cacá de volta') /* apelido do C */
+    await sentar(D, 'sul-8-L-2', 'Dedé 2')                                            /* o D criou outro */
+    const r = await restaurar(copia)
+    expect(r['voltou sem cadeira (escolhe outra ao abrir o site)']).toBe('Dedé')
+    expect(r['pulado: apelido já é de outro personagem']).toBe('Cacá de volta')
+    expect(r['voltou, mas sem dono (o navegador dele já tem outro personagem)']).toBe('Dedé')
+    expect(await linha('Dedé')).toEqual([{ lugar: null, dono: null }])
+    expect((await meu(D)).m).toMatchObject({ apelido: 'Dedé 2' })
+  })
+
+  test('sem colar a cópia (ou colando outra coisa): para sem mudar nada', async () => {
+    expect(await erroDe(db.exec(gerarSqlBackupRestaurar()))).toMatch(/parei sem mudar nada/)
+    expect(await erroDe(db.exec(gerarSqlBackupRestaurar().replace(MARCA_COLAR, '{"oi": 1}')))).toMatch(/não é uma cópia do escritório/)
   })
 })

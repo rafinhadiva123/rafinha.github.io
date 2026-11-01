@@ -69,6 +69,17 @@ describe('banco online', () => {
     await expect(b.sentar('sul-1-L-1', 'Ana', PADRAO)).rejects.toMatchObject({ codigo: 'lugar_ocupado', message: MENSAGENS.lugar_ocupado })
   })
 
+  test('excluir: chama escritorio_sair só quando há sessão; erro vira português', async () => {
+    const semLogin = clienteFalso()
+    expect(await criarBancoSupabase({ url: '', chave: '' }, { cliente: semLogin.cliente }).sair()).toBe(false)
+    expect(semLogin.chamadas).toEqual([])
+    const comLogin = clienteFalso({ sessao: true })
+    await criarBancoSupabase({ url: '', chave: '' }, { cliente: comLogin.cliente }).sair()
+    expect(comLogin.chamadas).toEqual(['escritorio_sair'])
+    const caiu = clienteFalso({ sessao: true, erroRpc: 'qualquer coisa' })
+    await expect(criarBancoSupabase({ url: '', chave: '' }, { cliente: caiu.cliente }).sair()).rejects.toMatchObject({ codigo: 'rede' })
+  })
+
   test('limite de logins vira aviso de muita gente entrando', async () => {
     const { cliente } = clienteFalso({ erroLogin: 429 })
     const b = criarBancoSupabase({ url: '', chave: '' }, { cliente })
@@ -88,5 +99,16 @@ describe('banco local', () => {
     expect(await b.listar()).toEqual([{ lugar: 'sul-1-L-2', apelido: 'Ana', visual: PADRAO }])
     expect(await b.meu()).toMatchObject({ lugar: 'sul-1-L-2' })
     expect(avisos).toBe(2)
+  })
+
+  test('excluir tira o meu personagem e libera o apelido', async () => {
+    const mem = new Map<string, string>()
+    const armazenamento = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v) }
+    const b = criarBancoLocal(armazenamento)
+    await b.sentar('sul-1-L-1', 'Ana', PADRAO)
+    expect(await b.sair()).toBe(true)
+    expect(await b.listar()).toEqual([])
+    expect(await b.meu()).toBeNull()
+    expect(await b.sair()).toBe(false)
   })
 })

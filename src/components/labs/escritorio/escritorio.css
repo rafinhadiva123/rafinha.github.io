@@ -143,6 +143,22 @@
 .esc-palco .ed-sec { background: transparent; color: var(--destaque, #24306b); }
 .esc-palco .ed-pri { background: var(--destaque, #24306b); color: var(--fundo, #fff); }
 .esc-palco .ed-sec:disabled, .esc-palco .ed-pri:disabled { opacity: 0.6; cursor: progress; }
+/* excluir o próprio personagem: separado das outras ações, na cor de erro */
+.esc-palco .ed-excluir { border-top: 1px solid var(--esc-linha); padding-top: 14px; }
+.esc-palco .ed-perigo {
+  padding: 6px 0; border: 0; background: transparent;
+  color: var(--esc-erro); font-size: 0.85rem; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.esc-palco .ed-confirma { display: grid; gap: 10px; }
+.esc-palco .ed-confirma[hidden], .esc-palco .ed-perigo[hidden] { display: none; }
+.esc-palco .ed-conf-texto { margin: 0; font-size: 0.9rem; }
+.esc-palco .ed-perigo-pri {
+  padding: 9px 14px; border-radius: 6px; border: 1px solid var(--esc-erro);
+  background: var(--esc-erro); color: var(--superficie, #f4f1ea);
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+}
+.esc-palco .ed-perigo-pri:disabled { opacity: 0.6; cursor: progress; }
 
 /* ---- modo boneco ---- */
 .esc-palco .pegman {

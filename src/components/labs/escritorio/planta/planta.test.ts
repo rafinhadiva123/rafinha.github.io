@@ -66,6 +66,25 @@ describe('mudança de layout', () => {
     expect(novas).toEqual([])
   })
 
+  test('cada bancada tem um número único dentro da zona', () => {
+    for (const z of ZONAS) {
+      const ns = BANCADAS.filter(b => b.zona === z.id).map(b => b.n)
+      for (const n of ns) expect(Number.isInteger(n) && n > 0, `${z.id} ${n}`).toBe(true)
+      expect(new Set(ns).size, z.id).toBe(ns.length)
+    }
+  })
+
+  test('acrescentar uma bancada ao norte das outras não renomeia nem muda ninguém de lugar', () => {
+    const centro = BANCADAS.filter(b => b.zona === 'centro')
+    const nova = { ...centro[0], n: Math.max(...centro.map(b => b.n)) + 1, z: Math.min(...centro.map(b => b.z)) - 3 }
+    const depois = new Map(gerarLugares([...BANCADAS, nova]).map(l => [l.id, l]))
+    for (const l of LUGARES) {
+      expect(depois.get(l.id)?.x, l.id).toBeCloseTo(l.x)
+      expect(depois.get(l.id)?.z, l.id).toBeCloseTo(l.z)
+    }
+    expect(depois.size).toBe(LUGARES.length + nova.lugares * 2)
+  })
+
   test('tirar uma bancada lista exatamente as cadeiras que somem', () => {
     const sem = BANCADAS.filter(b => !(b.zona === 'centro' && b.x === 42.5))
     const { removidas } = compararLayouts(LUGARES, gerarLugares(sem))

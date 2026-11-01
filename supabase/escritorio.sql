@@ -4,7 +4,10 @@
 --
 -- Como rodar: Supabase → SQL Editor → New query → cole tudo → Run.
 -- Pode rodar de novo quantas vezes quiser (depois de mudar o layout, por
--- exemplo): nada que já está salvo é apagado.
+-- exemplo): nada que já está salvo é apagado. O SQL Editor roda o texto
+-- colado inteiro numa transação só: se der erro em qualquer ponto, nada muda.
+-- Antes de rodar um layout novo: npm run layout:escritorio e um backup
+-- (escritorio-backup-copiar.sql).
 --
 -- Regras:
 -- * qualquer pessoa lê as cadeiras e os personagens;
@@ -13,7 +16,9 @@
 -- * cada navegador (login anônimo) tem um personagem só, e só ele mexe nele;
 -- * apelidos não se repetem (sem diferença de acento, maiúscula ou espaço);
 -- * os 15 personagens fixos já vêm sentados, com o apelido reservado;
--- * para tirar alguém: Table Editor → escritorio_personagens → apagar a linha.
+-- * cada visitante pode excluir o próprio personagem (escritorio_sair);
+-- * para tirar alguém: Table Editor → escritorio_personagens → apagar a
+--   linha (nunca uma com fixo = true).
 
 create extension if not exists unaccent with schema extensions;
 
@@ -160,6 +165,27 @@ as $$
   where d.dono = auth.uid()
 $$;
 
+-- excluir o próprio personagem: apaga a linha (o dono vai junto) e libera
+-- a cadeira e o apelido; fixo nunca sai por aqui
+create or replace function public.escritorio_sair()
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  eu uuid := auth.uid();
+begin
+  if eu is null then
+    raise exception using message = 'sem_sessao', errcode = 'P0001';
+  end if;
+  delete from public.escritorio_personagens p
+  using public.escritorio_donos d
+  where d.dono = eu and p.id = d.personagem and not p.fixo;
+  return found;
+end;
+$$;
+
 -- 4. Acesso ---------------------------------------------------------------
 
 alter table public.escritorio_lugares enable row level security;
@@ -178,8 +204,8 @@ create policy "todos leem" on public.escritorio_personagens for select to anon, 
 
 revoke all on function public.escritorio_limpar_apelido(text), public.escritorio_chave(text),
   public.escritorio_visual_valido(jsonb) from public, anon, authenticated;
-revoke all on function public.escritorio_sentar(text, text, jsonb), public.escritorio_meu() from public, anon;
-grant execute on function public.escritorio_sentar(text, text, jsonb), public.escritorio_meu() to authenticated;
+revoke all on function public.escritorio_sentar(text, text, jsonb), public.escritorio_meu(), public.escritorio_sair() from public, anon;
+grant execute on function public.escritorio_sentar(text, text, jsonb), public.escritorio_meu(), public.escritorio_sair() to authenticated;
 
 -- 5. Atualização ao vivo --------------------------------------------------
 
@@ -192,7 +218,39 @@ begin
   end if;
 end $$;
 
--- 6. Cadeiras (511) ------------------------------------------------
+-- 6. Cadeiras dos fixos livres? -------------------------------------------
+
+do $$
+declare
+  conflito text;
+begin
+  select string_agg(format('%s (do fixo %s) está com %s', f.lugar, f.apelido, p.apelido), '; ')
+  into conflito
+  from (values
+  ('Gabi', 'leste-1-N-1'),
+  ('Shimono', 'leste-1-N-2'),
+  ('Formiga', 'leste-1-N-3'),
+  ('Marlin', 'leste-1-N-4'),
+  ('Matias', 'leste-1-N-5'),
+  ('João', 'leste-1-S-1'),
+  ('Higuinho', 'leste-1-S-2'),
+  ('Erik', 'leste-1-S-3'),
+  ('Wendel', 'leste-1-S-4'),
+  ('Elton', 'leste-1-S-5'),
+  ('Jana', 'nordeste-2-L-1'),
+  ('Heitor', 'nordeste-2-L-2'),
+  ('Lika', 'nordeste-2-L-3'),
+  ('Rafa', 'nordeste-2-L-4'),
+  ('Sem sangue', 'nordeste-4-L-1')
+  ) as f (apelido, lugar)
+  join public.escritorio_personagens p
+    on p.lugar = f.lugar and p.apelido_chave <> public.escritorio_chave(f.apelido);
+  if conflito is not null then
+    raise exception 'parei sem mudar nada: cadeira de personagem fixo ocupada → %. Mude o visitante de cadeira (Table Editor → escritorio_personagens → coluna lugar) ou escolha outra cadeira para o fixo, e rode de novo.', conflito;
+  end if;
+end $$;
+
+-- 7. Cadeiras (511) ------------------------------------------------
 
 insert into public.escritorio_lugares (id, zona, area) values
   ('norte-1-O-1', 'norte', null),
@@ -713,7 +771,7 @@ on conflict (id) do update set zona = excluded.zona, area = excluded.area, ativo
 update public.escritorio_lugares set ativo = false
 where id not in ('norte-1-O-1', 'norte-1-O-2', 'norte-1-O-3', 'norte-1-O-4', 'norte-1-L-1', 'norte-1-L-2', 'norte-1-L-3', 'norte-1-L-4', 'norte-2-O-1', 'norte-2-O-2', 'norte-2-O-3', 'norte-2-O-4', 'norte-2-L-1', 'norte-2-L-2', 'norte-2-L-3', 'norte-2-L-4', 'norte-3-O-1', 'norte-3-O-2', 'norte-3-O-3', 'norte-3-O-4', 'norte-3-L-1', 'norte-3-L-2', 'norte-3-L-3', 'norte-3-L-4', 'norte-4-O-1', 'norte-4-O-2', 'norte-4-O-3', 'norte-4-O-4', 'norte-4-L-1', 'norte-4-L-2', 'norte-4-L-3', 'norte-4-L-4', 'norte-5-O-1', 'norte-5-O-2', 'norte-5-O-3', 'norte-5-O-4', 'norte-5-L-1', 'norte-5-L-2', 'norte-5-L-3', 'norte-5-L-4', 'norte-6-O-1', 'norte-6-O-2', 'norte-6-O-3', 'norte-6-O-4', 'norte-6-L-1', 'norte-6-L-2', 'norte-6-L-3', 'norte-6-L-4', 'norte-7-O-1', 'norte-7-O-2', 'norte-7-O-3', 'norte-7-O-4', 'norte-7-L-1', 'norte-7-L-2', 'norte-7-L-3', 'norte-7-L-4', 'norte-8-O-1', 'norte-8-O-2', 'norte-8-O-3', 'norte-8-O-4', 'norte-8-L-1', 'norte-8-L-2', 'norte-8-L-3', 'norte-8-L-4', 'norte-9-O-1', 'norte-9-O-2', 'norte-9-O-3', 'norte-9-O-4', 'norte-9-L-1', 'norte-9-L-2', 'norte-9-L-3', 'norte-9-L-4', 'norte-10-O-1', 'norte-10-O-2', 'norte-10-O-3', 'norte-10-O-4', 'norte-10-L-1', 'norte-10-L-2', 'norte-10-L-3', 'norte-10-L-4', 'norte-11-O-1', 'norte-11-O-2', 'norte-11-O-3', 'norte-11-O-4', 'norte-11-L-1', 'norte-11-L-2', 'norte-11-L-3', 'norte-11-L-4', 'norte-12-O-1', 'norte-12-O-2', 'norte-12-O-3', 'norte-12-O-4', 'norte-12-L-1', 'norte-12-L-2', 'norte-12-L-3', 'norte-12-L-4', 'norte-13-O-1', 'norte-13-O-2', 'norte-13-O-3', 'norte-13-O-4', 'norte-13-L-1', 'norte-13-L-2', 'norte-13-L-3', 'norte-13-L-4', 'norte-14-O-1', 'norte-14-O-2', 'norte-14-O-3', 'norte-14-O-4', 'norte-14-L-1', 'norte-14-L-2', 'norte-14-L-3', 'norte-14-L-4', 'nordeste-1-O-1', 'nordeste-1-O-2', 'nordeste-1-O-3', 'nordeste-1-O-4', 'nordeste-1-L-1', 'nordeste-1-L-2', 'nordeste-1-L-3', 'nordeste-1-L-4', 'nordeste-2-O-1', 'nordeste-2-O-2', 'nordeste-2-O-3', 'nordeste-2-O-4', 'nordeste-2-L-1', 'nordeste-2-L-2', 'nordeste-2-L-3', 'nordeste-2-L-4', 'nordeste-3-O-1', 'nordeste-3-O-2', 'nordeste-3-O-3', 'nordeste-3-O-4', 'nordeste-3-L-1', 'nordeste-3-L-2', 'nordeste-3-L-3', 'nordeste-3-L-4', 'nordeste-4-O-1', 'nordeste-4-O-2', 'nordeste-4-O-3', 'nordeste-4-O-4', 'nordeste-4-L-1', 'nordeste-4-L-2', 'nordeste-4-L-3', 'nordeste-4-L-4', 'leste-1-N-1', 'leste-1-N-2', 'leste-1-N-3', 'leste-1-N-4', 'leste-1-N-5', 'leste-1-S-1', 'leste-1-S-2', 'leste-1-S-3', 'leste-1-S-4', 'leste-1-S-5', 'leste-2-N-1', 'leste-2-N-2', 'leste-2-N-3', 'leste-2-N-4', 'leste-2-N-5', 'leste-2-S-1', 'leste-2-S-2', 'leste-2-S-3', 'leste-2-S-4', 'leste-2-S-5', 'leste-3-N-1', 'leste-3-N-2', 'leste-3-N-3', 'leste-3-N-4', 'leste-3-N-5', 'leste-3-S-1', 'leste-3-S-2', 'leste-3-S-3', 'leste-3-S-4', 'leste-3-S-5', 'leste-4-N-1', 'leste-4-N-2', 'leste-4-N-3', 'leste-4-N-4', 'leste-4-N-5', 'leste-4-S-1', 'leste-4-S-2', 'leste-4-S-3', 'leste-4-S-4', 'leste-4-S-5', 'leste-5-N-1', 'leste-5-N-2', 'leste-5-N-3', 'leste-5-N-4', 'leste-5-N-5', 'leste-5-S-1', 'leste-5-S-2', 'leste-5-S-3', 'leste-5-S-4', 'leste-5-S-5', 'leste-6-N-1', 'leste-6-N-2', 'leste-6-N-3', 'leste-6-N-4', 'leste-6-N-5', 'leste-6-S-1', 'leste-6-S-2', 'leste-6-S-3', 'leste-6-S-4', 'leste-6-S-5', 'leste-7-N-1', 'leste-7-N-2', 'leste-7-N-3', 'leste-7-N-4', 'leste-7-N-5', 'leste-7-S-1', 'leste-7-S-2', 'leste-7-S-3', 'leste-7-S-4', 'leste-7-S-5', 'centro-oeste-1-O-1', 'centro-oeste-1-O-2', 'centro-oeste-1-O-3', 'centro-oeste-1-O-4', 'centro-oeste-1-O-5', 'centro-oeste-1-L-1', 'centro-oeste-1-L-2', 'centro-oeste-1-L-3', 'centro-oeste-1-L-4', 'centro-oeste-1-L-5', 'centro-oeste-2-O-1', 'centro-oeste-2-O-2', 'centro-oeste-2-O-3', 'centro-oeste-2-O-4', 'centro-oeste-2-O-5', 'centro-oeste-2-L-1', 'centro-oeste-2-L-2', 'centro-oeste-2-L-3', 'centro-oeste-2-L-4', 'centro-oeste-2-L-5', 'centro-oeste-3-O-1', 'centro-oeste-3-O-2', 'centro-oeste-3-O-3', 'centro-oeste-3-O-4', 'centro-oeste-3-O-5', 'centro-oeste-3-L-1', 'centro-oeste-3-L-2', 'centro-oeste-3-L-3', 'centro-oeste-3-L-4', 'centro-oeste-3-L-5', 'centro-oeste-4-O-1', 'centro-oeste-4-O-2', 'centro-oeste-4-O-3', 'centro-oeste-4-O-4', 'centro-oeste-4-O-5', 'centro-oeste-4-L-1', 'centro-oeste-4-L-2', 'centro-oeste-4-L-3', 'centro-oeste-4-L-4', 'centro-oeste-4-L-5', 'centro-oeste-5-O-1', 'centro-oeste-5-O-2', 'centro-oeste-5-O-3', 'centro-oeste-5-O-4', 'centro-oeste-5-O-5', 'centro-oeste-5-L-1', 'centro-oeste-5-L-2', 'centro-oeste-5-L-3', 'centro-oeste-5-L-4', 'centro-oeste-5-L-5', 'centro-1-O-1', 'centro-1-O-2', 'centro-1-O-3', 'centro-1-O-4', 'centro-1-O-5', 'centro-1-O-6', 'centro-1-L-1', 'centro-1-L-2', 'centro-1-L-3', 'centro-1-L-4', 'centro-1-L-5', 'centro-1-L-6', 'centro-2-O-1', 'centro-2-O-2', 'centro-2-O-3', 'centro-2-O-4', 'centro-2-O-5', 'centro-2-O-6', 'centro-2-L-1', 'centro-2-L-2', 'centro-2-L-3', 'centro-2-L-4', 'centro-2-L-5', 'centro-2-L-6', 'centro-leste-1-O-1', 'centro-leste-1-O-2', 'centro-leste-1-O-3', 'centro-leste-1-O-4', 'centro-leste-1-O-5', 'centro-leste-1-L-1', 'centro-leste-1-L-2', 'centro-leste-1-L-3', 'centro-leste-1-L-4', 'centro-leste-1-L-5', 'centro-leste-2-O-1', 'centro-leste-2-O-2', 'centro-leste-2-O-3', 'centro-leste-2-O-4', 'centro-leste-2-O-5', 'centro-leste-2-L-1', 'centro-leste-2-L-2', 'centro-leste-2-L-3', 'centro-leste-2-L-4', 'centro-leste-2-L-5', 'sul-1-O-1', 'sul-1-O-2', 'sul-1-O-3', 'sul-1-O-4', 'sul-1-O-5', 'sul-1-L-1', 'sul-1-L-2', 'sul-1-L-3', 'sul-1-L-4', 'sul-1-L-5', 'sul-2-O-1', 'sul-2-O-2', 'sul-2-O-3', 'sul-2-O-4', 'sul-2-O-5', 'sul-2-L-1', 'sul-2-L-2', 'sul-2-L-3', 'sul-2-L-4', 'sul-2-L-5', 'sul-3-O-1', 'sul-3-O-2', 'sul-3-O-3', 'sul-3-O-4', 'sul-3-O-5', 'sul-3-L-1', 'sul-3-L-2', 'sul-3-L-3', 'sul-3-L-4', 'sul-3-L-5', 'sul-4-O-1', 'sul-4-O-2', 'sul-4-O-3', 'sul-4-O-4', 'sul-4-O-5', 'sul-4-L-1', 'sul-4-L-2', 'sul-4-L-3', 'sul-4-L-4', 'sul-4-L-5', 'sul-5-O-1', 'sul-5-O-2', 'sul-5-O-3', 'sul-5-O-4', 'sul-5-O-5', 'sul-5-L-1', 'sul-5-L-2', 'sul-5-L-3', 'sul-5-L-4', 'sul-5-L-5', 'sul-6-O-1', 'sul-6-O-2', 'sul-6-O-3', 'sul-6-O-4', 'sul-6-O-5', 'sul-6-L-1', 'sul-6-L-2', 'sul-6-L-3', 'sul-6-L-4', 'sul-6-L-5', 'sul-7-O-1', 'sul-7-O-2', 'sul-7-O-3', 'sul-7-O-4', 'sul-7-O-5', 'sul-7-L-1', 'sul-7-L-2', 'sul-7-L-3', 'sul-7-L-4', 'sul-7-L-5', 'sul-8-O-1', 'sul-8-O-2', 'sul-8-O-3', 'sul-8-O-4', 'sul-8-O-5', 'sul-8-L-1', 'sul-8-L-2', 'sul-8-L-3', 'sul-8-L-4', 'sul-8-L-5', 'sul-9-O-1', 'sul-9-O-2', 'sul-9-O-3', 'sul-9-O-4', 'sul-9-O-5', 'sul-9-L-1', 'sul-9-L-2', 'sul-9-L-3', 'sul-9-L-4', 'sul-9-L-5', 'sul-10-O-1', 'sul-10-O-2', 'sul-10-O-3', 'sul-10-O-4', 'sul-10-O-5', 'sul-10-L-1', 'sul-10-L-2', 'sul-10-L-3', 'sul-10-L-4', 'sul-10-L-5', 'sul-11-O-1', 'sul-11-O-2', 'sul-11-O-3', 'sul-11-O-4', 'sul-11-O-5', 'sul-11-L-1', 'sul-11-L-2', 'sul-11-L-3', 'sul-11-L-4', 'sul-11-L-5', 'sul-12-O-1', 'sul-12-O-2', 'sul-12-O-3', 'sul-12-O-4', 'sul-12-O-5', 'sul-12-L-1', 'sul-12-L-2', 'sul-12-L-3', 'sul-12-L-4', 'sul-12-L-5', 'sul-13-O-1', 'sul-13-O-2', 'sul-13-O-3', 'sul-13-O-4', 'sul-13-O-5', 'sul-13-L-1', 'sul-13-L-2', 'sul-13-L-3', 'sul-13-L-4', 'sul-13-L-5', 'sul-14-O-1', 'sul-14-O-2', 'sul-14-O-3', 'sul-14-O-4', 'sul-14-O-5', 'sul-14-L-1', 'sul-14-L-2', 'sul-14-L-3', 'sul-14-L-4', 'sul-14-L-5', 'sul-15-O-1', 'sul-15-O-2', 'sul-15-O-3', 'sul-15-O-4', 'sul-15-O-5', 'sul-15-L-1', 'sul-15-L-2', 'sul-15-L-3', 'sul-15-L-4', 'sul-15-L-5', 'sul-16-O-1', 'sul-16-O-2', 'sul-16-O-3', 'sul-16-O-4', 'sul-16-O-5', 'sul-16-L-1', 'sul-16-L-2', 'sul-16-L-3', 'sul-16-L-4', 'sul-16-L-5', 'sul-17-O-1', 'sul-17-O-2', 'sul-17-O-3', 'sul-17-O-4', 'sul-17-O-5', 'sul-17-L-1', 'sul-17-L-2', 'sul-17-L-3', 'sul-17-L-4', 'sul-17-L-5', 'sul-18-O-1', 'sul-18-O-2', 'sul-18-O-3', 'sul-18-O-4', 'sul-18-O-5', 'sul-18-L-1', 'sul-18-L-2', 'sul-18-L-3', 'sul-18-L-4', 'sul-18-L-5', 'sul-19-O-1', 'sul-19-O-2', 'sul-19-O-3', 'sul-19-O-4', 'sul-19-O-5', 'sul-19-L-1', 'sul-19-L-2', 'sul-19-L-3', 'sul-19-L-4', 'sul-19-L-5', 'sul-20-O-1', 'sul-20-O-2', 'sul-20-O-3', 'sul-20-O-4', 'sul-20-O-5', 'sul-20-L-1', 'sul-20-L-2', 'sul-20-L-3', 'sul-20-L-4', 'sul-20-L-5', 'recepcao-1', 'recepcao-2', 'sala-executiva-1');
 
--- 7. Personagens fixos (15) ----------------------------------------------
+-- 8. Personagens fixos (15) ----------------------------------------------
 
 insert into public.escritorio_personagens (fixo, apelido, apelido_chave, lugar)
 select true, f.apelido, public.escritorio_chave(f.apelido), f.lugar
@@ -736,7 +794,7 @@ from (values
 ) as f (apelido, lugar)
 on conflict (apelido_chave) do update set lugar = excluded.lugar, fixo = true;
 
--- 8. Conferência: tem que aparecer "tudo certo" -----------------------------
+-- 9. Conferência: tem que aparecer "tudo certo" -----------------------------
 
 select case
   when (select count(*) from pg_tables where schemaname = 'public' and not rowsecurity) > 0

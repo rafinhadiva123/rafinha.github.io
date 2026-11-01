@@ -22,6 +22,7 @@ import { paraBoneco } from '../visual.js';
 export const MSG_CARGA = 'Não deu para carregar quem está no escritório agora. Os 15 de sempre continuam nas cadeiras.';
 export const MSG_CONFLITO = 'Alguém sentou nessa cadeira enquanto você escolhia. Escolha outra.';
 export const MSG_LOTADO = 'O escritório está lotado: não sobrou cadeira livre.';
+export const msgExcluido = apelido => `Pronto, ${apelido} foi excluído. A cadeira e o apelido ficaram livres.`;
 const MSG_SEM_BANCO = 'Sem conexão com o escritório agora. Tente de novo em instantes.';
 
 /**
@@ -187,6 +188,7 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
         redesenhar();
       },
       salvar: (apelido, visual) => salvar(vez, lugar, apelido, visual),
+      excluir: meu && banco && banco.sair ? () => excluir(vez) : null,
       fechar: () => { if (vez === vezEditor) encerrarPainel(); },
     });
     redesenhar();
@@ -235,6 +237,18 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
     if (vez === vezEditor) encerrarPainel();
     await recarregar();
     avisar(`Pronto, ${novo.apelido} está sentado. Quem abrir o escritório vai ver você aqui.`);
+  }
+
+  /* "Excluir meu personagem": some da cadeira na hora e o apelido fica livre */
+  async function excluir(vez) {
+    if (!banco || !banco.sair) throw new Error(MSG_SEM_BANCO);
+    const anterior = meu;
+    await banco.sair();
+    meu = null;
+    if (anterior) visitantes = visitantes.filter(v => v.lugar !== anterior.lugar);
+    if (vez === vezEditor) encerrarPainel();
+    await recarregar();
+    if (anterior) avisar(msgExcluido(anterior.apelido));
   }
 
   async function recarregar({ aoVivo = false } = {}) {
