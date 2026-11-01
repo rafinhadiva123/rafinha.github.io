@@ -120,6 +120,9 @@
 .esc-palco .ed-erro:empty { display: none; }
 .esc-palco .ed-grupos { display: grid; gap: 12px; }
 .esc-palco .ed-grupo { display: grid; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+/* legend solto encolhe até a menor palavra ("Tamanho / da / silhueta"); com
+   float ele vira item do grid e ocupa a linha inteira */
+.esc-palco .ed-grupo > legend { float: left; width: 100%; }
 .esc-palco .ed-cores { display: flex; flex-wrap: wrap; gap: 6px; }
 .esc-palco .ed-cor {
   width: 26px; height: 26px; padding: 0;

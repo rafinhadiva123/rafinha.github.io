@@ -21,7 +21,7 @@ export const GRUPOS = [
   { chave: 'camisa', rot: 'Camisa', tipo: 'cor' },
   { chave: 'barba', rot: 'Barba', tipo: 'chip' },
   { chave: 'oculos', rot: 'Óculos', tipo: 'chip' },
-  { chave: 'silhueta', rot: 'Tamanho de silhueta', tipo: 'chip' },
+  { chave: 'silhueta', rot: 'Tamanho da silhueta', tipo: 'chip' },
   { chave: 'altura', rot: 'Altura', tipo: 'chip' },
   { chave: 'acessorio', rot: 'Acessório', tipo: 'chip' },
   { chave: 'corLaco', rot: 'Cor do laço', tipo: 'cor', so: v => v.acessorio === 'laco' },
