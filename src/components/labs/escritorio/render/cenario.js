@@ -259,6 +259,13 @@ longSofa(14.84,9.1,Math.PI/2,1.8); longSofa(19.09,9.1,-Math.PI/2,1.8);
 box(world,.7,.4,1,M.woodLight,16.97,0,9.1);
 box(world,4.2,.4,.9,M.woodLight,49.8,0,5.7);
 planter(54.9,5.7,1.2); planter(44.6,5.7,1.1);
+/* mesa redonda branca no corredor entre o lounge dos sofás e as bancadas da
+   zona Leste, com folhas saindo de um vaso embutido no meio do tampo */
+{ const x=57.6, z=-0.4;
+  cyl(world,.75,.05,M.white,x,.72,z,32); cyl(world,.1,.72,M.white,x,0,z,12); cyl(world,.4,.03,M.white,x,0,z,24);
+  cyl(world,.2,.08,M.dark,x,.77,z,16);
+  const folha=(r,mat,dx,dy,dz)=>{ const f=new THREE.Mesh(new THREE.IcosahedronGeometry(r,0),mat); f.position.set(x+dx,.77+dy,z+dz); f.castShadow=true; world.add(f); };
+  folha(.3,M.green,0,.3,0); folha(.22,M.green2,.16,.52,-.08); folha(.2,M.green2,-.17,.42,.12); }
 /* sala executiva: cômodo extra anexo à parede oeste */
 {
   const f=new THREE.Mesh(new THREE.BoxGeometry(10,0.1,11.5),M.concrete); f.position.set(-5,-0.05,22.25); f.receiveShadow=true; world.add(f);
