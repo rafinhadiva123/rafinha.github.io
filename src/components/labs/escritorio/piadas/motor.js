@@ -322,8 +322,8 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
   /* ----------------------------------------------------- fuga do armário */
 
   /* velocidades em m/s */
-  const VEL_FUGITIVO = 2.5;
-  const VEL_PERSEGUIDOR = 2.9;   /* teto: ele desacelera se for preciso para chegar depois do fugitivo */
+  const VEL_FUGITIVO = 3.5;
+  const VEL_PERSEGUIDOR = 3.8;   /* teto: ele desacelera se for preciso para chegar depois do fugitivo */
   const VEL_VOLTA = 1.6;         /* o perseguidor voltando da saída até a cadeira */
   const CHEGA_DEPOIS = 0.6;      /* s: quanto depois do fugitivo o perseguidor chega na saída */
 
