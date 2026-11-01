@@ -44,8 +44,10 @@ export function criarAndar(palco) {
     marcar();
   }
   lerFundo();
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', lerFundo);
-  new MutationObserver(lerFundo).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-tema'] });
+  const esquema = matchMedia('(prefers-color-scheme: dark)');
+  esquema.addEventListener('change', lerFundo);
+  const observaTema = new MutationObserver(lerFundo);
+  observaTema.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-tema'] });
 
   cena.add(new THREE.HemisphereLight(0xffffff, 0xb7b0a2, 0.78));
   const sol = new THREE.DirectionalLight(0xffffff, 0.55);
@@ -173,7 +175,8 @@ export function criarAndar(palco) {
     camera.updateProjectionMatrix();
     marcar();
   }
-  new ResizeObserver(redimensionar).observe(palco);
+  const observaTamanho = new ResizeObserver(redimensionar);
+  observaTamanho.observe(palco);
   redimensionar();
   camera.position.copy(posInicial());
   controles.target.set(20, 0, 12);
@@ -185,8 +188,9 @@ export function criarAndar(palco) {
   let anterior = performance.now();
   let ultimaLod = 0, camMudou = true, quadros = 0, fps = 0, t0fps = performance.now();
   const ultimaPos = new THREE.Vector3(), ultimoAlvo = new THREE.Vector3();
+  let quadroId = 0;
   function laco(agora) {
-    requestAnimationFrame(laco);
+    quadroId = requestAnimationFrame(laco);
     const dt = Math.min(0.1, (agora - anterior) / 1000);
     anterior = agora;
     if (voo) {
@@ -216,9 +220,39 @@ export function criarAndar(palco) {
     /* o que fica por cima do canvas acompanha o quadro desenhado */
     for (const fn of aoDesenharFns) fn();
   }
-  requestAnimationFrame(laco);
+  quadroId = requestAnimationFrame(laco);
+
+  /* o navegador pode tirar o WebGL (GPU travou, memória acabou): quem montou o
+     andar decide o que fazer (o site troca para a versão sem 3D) */
+  const aoPerderFns = new Set();
+  const perdeu = ev => { ev.preventDefault(); aoPerderFns.forEach(fn => fn()); };
+  renderer.domElement.addEventListener('webglcontextlost', perdeu);
+
+  let parado = false;
+  function parar() {
+    if (parado) return;
+    parado = true;
+    cancelAnimationFrame(quadroId);
+    observaTamanho.disconnect();
+    observaTema.disconnect();
+    esquema.removeEventListener('change', lerFundo);
+    renderer.domElement.removeEventListener('webglcontextlost', perdeu);
+    aoDesenharFns.clear();
+    controles.dispose();
+    cena.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of ms) { if (m.map) m.map.dispose(); m.dispose(); }
+    });
+    renderer.dispose();
+    renderer.forceContextLoss();
+    renderer.domElement.remove();
+  }
 
   return {
+    parar,
+    /** fn() roda se o navegador derrubar o WebGL; devolve "parar". */
+    aoPerderContexto(fn) { aoPerderFns.add(fn); return () => aoPerderFns.delete(fn); },
     renderer, cena, camera, controles, multidao,
     vista3d, vistaTopo, irPara, olharPara, lugarEm, pontoNoChao, raioEm, projetar, selecionar,
     /** Distância da câmera até o ponto que ela olha: pequena = perto do chão. */

@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { caminho, maisPerto } from '../render/colisao.js';
 import { LUGAR } from '../planta/lugares.js';
-import { desenharQuadro } from '../quadro.js';
+import { desenharQuadro } from './quadro.js';
 import * as F from './figuras.js';
 
 const { V, suaviza } = F;
