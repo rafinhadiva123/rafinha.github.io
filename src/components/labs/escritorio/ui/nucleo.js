@@ -166,6 +166,8 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
     /* quem já sentou só vê os "+" enquanto escolhe para onde mudar */
     mostrarMais: () => !meu || Boolean(mudando),
     meuLugar: () => (meu ? meu.lugar : null),
+    /* no modo boneco o clique é para andar */
+    bloqueado: () => Boolean(passeio && passeio.ativo),
   });
   if (c.mudancaCancelar) c.mudancaCancelar.addEventListener('click', () => cancelarMudanca());
   /* no modo boneco o clique é para andar, menos no armário: a fuga continua valendo */

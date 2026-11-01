@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { lugaresComMais, PERTO, RETRATO, MAX_MAIS, raioDosMais } from './mais.js'
+import { lugaresComMais, PERTO, RETRATO, MAX_MAIS, raioDosMais, acertaCadeira } from './mais.js'
 import { buscarApelido } from './busca.js'
 import { LUGAR, LUGARES, nomeDaArea } from '../planta/lugares.js'
 import { FIXOS } from '../planta/fixos.js'
@@ -72,5 +72,27 @@ describe('nada de zona na tela', () => {
     expect(nomeDaArea('leste-1-N-1')).toBeNull()
     expect(nomeDaArea('recepcao-1')).toBe('Recepção')
     expect(nomeDaArea('sala-executiva-1')).toBe('Sala executiva Oeste')
+  })
+})
+
+describe('clicar na própria cadeira abre o editor', () => {
+  const l = { x: 10, z: 5 }
+  /* câmera de frente e por cima, como na vista de retrato */
+  const mirar = (alvo: { x: number; y: number; z: number }) => {
+    const origem = { x: 10, y: 3, z: 8 }
+    const d = { x: alvo.x - origem.x, y: alvo.y - origem.y, z: alvo.z - origem.z }
+    const n = Math.hypot(d.x, d.y, d.z)
+    return { origem, direcao: { x: d.x / n, y: d.y / n, z: d.z / n } }
+  }
+
+  test('acerta no assento, na cabeça e nas pernas de quem senta', () => {
+    expect(acertaCadeira(mirar({ x: 10, y: 0.5, z: 5 }), l)).toBe(true)
+    expect(acertaCadeira(mirar({ x: 10, y: 1.6, z: 5 }), l)).toBe(true)
+    expect(acertaCadeira(mirar({ x: 10.3, y: 0.6, z: 5.4 }), l)).toBe(true)
+  })
+
+  test('erra a cadeira do lado e acima da cabeça', () => {
+    expect(acertaCadeira(mirar({ x: 11.2, y: 0.5, z: 5 }), l)).toBe(false)
+    expect(acertaCadeira(mirar({ x: 10, y: 2.2, z: 5 }), l)).toBe(false)
   })
 })
