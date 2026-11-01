@@ -1,0 +1,197 @@
+/* Peças da tela do escritório: botões "+", busca, editor, modo boneco e avisos.
+   Tudo preso em .esc-palco (o elemento que o controlador recebe), para não
+   vazar para a página. As cores vêm dos tokens do site, com reserva. */
+
+.esc-palco {
+  --esc-linha: color-mix(in srgb, var(--borda, #c9c4b8), var(--texto, #1d1d1b) 18%);
+  position: relative;
+  overflow: hidden;
+  height: clamp(360px, 62vh, 680px);
+  border: 1px solid var(--borda, #c9c4b8);
+  border-radius: var(--raio, 8px);
+  background: var(--superficie, #f4f1ea);
+  color: var(--texto, #1d1d1b);
+  font: inherit;
+}
+
+.esc-palco [hidden] { display: none !important; }
+.esc-palco canvas { display: block; width: 100%; height: 100%; max-width: none; touch-action: none; }
+.esc-palco button { font: inherit; color: inherit; }
+
+/* ---- "+" das cadeiras livres ---- */
+.esc-palco .mais-camada { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.esc-palco .mais {
+  position: absolute; left: 0; top: 0;
+  width: 30px; height: 30px; padding: 0;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--destaque, #24306b);
+  background: color-mix(in srgb, var(--superficie, #f4f1ea) 92%, transparent);
+  color: var(--destaque, #24306b);
+  cursor: pointer; pointer-events: auto;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+  transition: background 0.12s ease, color 0.12s ease, scale 0.12s ease;
+}
+.esc-palco .mais svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.esc-palco .mais:hover { background: var(--destaque, #24306b); color: var(--fundo, #fff); scale: 1.12; }
+.esc-palco .mais:focus-visible { outline: 2px solid var(--destaque, #24306b); outline-offset: 3px; }
+
+/* ---- busca por apelido ---- */
+.esc-palco .bu-raiz { position: absolute; left: 12px; top: 12px; z-index: 3; width: min(280px, calc(100% - 24px)); }
+.esc-palco .bu { position: relative; }
+.esc-palco .bu-campo {
+  width: 100%; box-sizing: border-box;
+  padding: 8px 10px 8px 34px;
+  border: 1px solid var(--esc-linha);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--superficie, #f4f1ea) 92%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 0.9rem; color: inherit;
+}
+.esc-palco .bu-campo:focus-visible { outline: 2px solid var(--destaque, #24306b); outline-offset: 1px; }
+.esc-palco .bu-lupa { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; translate: 0 -50%; pointer-events: none; }
+.esc-palco .bu-lupa svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; opacity: 0.6; }
+.esc-palco .bu-lista {
+  position: absolute; left: 0; right: 0; top: 100%;
+  margin: 4px 0 0; padding: 4px; list-style: none;
+  max-height: 240px; overflow: auto;
+  background: var(--superficie, #f4f1ea);
+  border: 1px solid var(--esc-linha); border-radius: 6px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.14);
+}
+.esc-palco .bu-item, .esc-palco .bu-vazio { padding: 6px 8px; border-radius: 4px; font-size: 0.9rem; }
+.esc-palco .bu-item { cursor: pointer; }
+.esc-palco .bu-item[aria-selected="true"] { background: var(--destaque, #24306b); color: var(--fundo, #fff); }
+.esc-palco .bu-vazio { opacity: 0.75; }
+
+/* ---- editor "Monte seu personagem" ---- */
+.esc-palco .ed-raiz {
+  position: absolute; z-index: 4; right: 0; top: 0; bottom: 0;
+  width: min(400px, 44%);
+  overflow: auto;
+  background: var(--superficie, #f4f1ea);
+  border-left: 1px solid var(--esc-linha);
+  box-shadow: -8px 0 24px rgb(0 0 0 / 0.12);
+}
+.esc-palco .ed-form { display: grid; gap: 16px; padding: 18px 18px 20px; }
+.esc-palco .ed-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.esc-palco .ed-titulo { margin: 0; font-size: 1.15rem; font-weight: 700; line-height: 1.2; }
+.esc-palco .ed-sub { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.8; }
+.esc-palco .ed-fechar {
+  flex: none; width: 32px; height: 32px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent;
+  font-size: 1.4rem; line-height: 1; cursor: pointer;
+}
+.esc-palco .ed-fechar:hover { background: var(--esc-linha); }
+.esc-palco .ed-bloco { display: grid; gap: 6px; }
+.esc-palco .ed-rot { margin: 0; padding: 0; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em; opacity: 0.85; }
+.esc-palco .ed-campo { position: relative; }
+.esc-palco .ed-input {
+  width: 100%; box-sizing: border-box;
+  padding: 9px 50px 9px 12px;
+  border: 1px solid var(--esc-linha); border-radius: 6px;
+  background: var(--fundo, #fff); color: inherit;
+  font-size: 1rem;
+}
+.esc-palco .ed-cont { position: absolute; right: 10px; top: 50%; translate: 0 -50%; font-size: 0.75rem; opacity: 0.6; pointer-events: none; }
+.esc-palco .ed-erro { margin: 0; min-height: 0; font-size: 0.85rem; color: #b3261e; }
+.esc-palco .ed-erro:empty { display: none; }
+.esc-palco .ed-grupos { display: grid; gap: 12px; }
+.esc-palco .ed-grupo { display: grid; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.esc-palco .ed-cores { display: flex; flex-wrap: wrap; gap: 6px; }
+.esc-palco .ed-cor {
+  width: 26px; height: 26px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--esc-linha);
+  background: var(--c); cursor: pointer;
+}
+.esc-palco .ed-cor[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--superficie, #f4f1ea), 0 0 0 4px var(--destaque, #24306b); }
+.esc-palco .ed-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.esc-palco .ed-chip {
+  padding: 6px 10px; border-radius: 999px;
+  border: 1px solid var(--esc-linha); background: transparent;
+  font-size: 0.85rem; cursor: pointer;
+}
+.esc-palco .ed-chip[aria-pressed="true"] { background: var(--destaque, #24306b); border-color: var(--destaque, #24306b); color: var(--fundo, #fff); }
+.esc-palco .ed-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.esc-palco .ed-sec, .esc-palco .ed-pri {
+  padding: 9px 14px; border-radius: 6px;
+  border: 1px solid var(--destaque, #24306b);
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+}
+.esc-palco .ed-sec { background: transparent; color: var(--destaque, #24306b); }
+.esc-palco .ed-pri { background: var(--destaque, #24306b); color: var(--fundo, #fff); }
+.esc-palco .ed-sec:disabled, .esc-palco .ed-pri:disabled { opacity: 0.6; cursor: progress; }
+
+/* ---- modo boneco ---- */
+.esc-palco .pegman {
+  position: absolute; right: 12px; bottom: 12px; z-index: 3;
+  width: 46px; height: 46px; padding: 0;
+  display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--esc-linha);
+  background: var(--superficie, #f4f1ea); color: var(--destaque, #24306b);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
+  cursor: grab; touch-action: none;
+}
+.esc-palco .pegman svg { width: 26px; height: 26px; fill: currentColor; }
+.esc-palco .pegman.arrastando { cursor: grabbing; }
+.esc-palco .pegman-fantasma {
+  position: absolute; left: 0; top: 0; z-index: 6;
+  width: 40px; height: 40px; color: var(--destaque, #24306b);
+  opacity: 0.55; pointer-events: none;
+}
+.esc-palco .pegman-fantasma svg { width: 100%; height: 100%; fill: currentColor; }
+.esc-palco .pegman-fantasma.valido { opacity: 0.95; }
+.esc-palco .pa-sair {
+  position: absolute; right: 12px; top: 12px; z-index: 5;
+  padding: 7px 12px; border-radius: 6px;
+  border: 1px solid var(--esc-linha); background: var(--superficie, #f4f1ea);
+  font-size: 0.85rem; cursor: pointer;
+}
+.esc-palco .pa-ajuda {
+  position: absolute; left: 12px; top: 60px; z-index: 3;
+  max-width: min(420px, calc(100% - 24px)); margin: 0; padding: 6px 10px;
+  border-radius: 6px; font-size: 0.8rem;
+  background: color-mix(in srgb, var(--superficie, #f4f1ea) 88%, transparent);
+}
+.esc-palco .pa-joy {
+  position: absolute; left: 12px; bottom: 12px; z-index: 3;
+  width: 96px; height: 96px; border-radius: 50%;
+  border: 1px solid var(--esc-linha);
+  background: color-mix(in srgb, var(--superficie, #f4f1ea) 80%, transparent);
+  touch-action: none;
+}
+.esc-palco .pa-pino {
+  position: absolute; left: 50%; top: 50%;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--destaque, #24306b); opacity: 0.85;
+}
+
+/* ---- avisos ---- */
+.esc-palco .esc-aviso {
+  position: absolute; left: 50%; bottom: 12px; z-index: 5;
+  translate: -50% 0; margin: 0; max-width: calc(100% - 24px);
+  padding: 9px 14px; border-radius: 8px;
+  background: var(--destaque, #24306b); color: var(--fundo, #fff);
+  font-size: 0.9rem; text-align: center;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.2);
+}
+.esc-palco .esc-carga {
+  position: absolute; left: 12px; right: 12px; bottom: 56px; z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border-radius: 8px;
+  background: var(--superficie, #f4f1ea); border: 1px solid var(--esc-linha);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+}
+.esc-palco .esc-carga-texto { margin: 0; font-size: 0.9rem; }
+.esc-palco .esc-tentar {
+  padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--destaque, #24306b); background: transparent;
+  color: var(--destaque, #24306b); font-size: 0.85rem; font-weight: 600;
+}
+
+/* no celular o editor sobe e ocupa a metade de baixo */
+@media (max-width: 720px) {
+  .esc-palco .ed-raiz { left: 0; top: auto; width: auto; height: 62%; border-left: 0; border-top: 1px solid var(--esc-linha); box-shadow: 0 -8px 24px rgb(0 0 0 / 0.12); }
+  .esc-palco .bu-raiz { width: calc(100% - 24px); }
+  .esc-palco .pa-ajuda { display: none; }
+}
