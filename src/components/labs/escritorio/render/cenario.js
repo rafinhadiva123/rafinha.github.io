@@ -84,7 +84,7 @@ function glassWall(x0,z0,x1,z1){
     const t=i/steps; box(world,0.08,2.85,0.1,M.dark,x0+(x1-x0)*t,0.35,z0+(z1-z0)*t,-ang,true);
   }
 }
-glassWall(0,D,W,D); glassWall(W,0,W,D); glassWall(0,0.3,0,11.9); glassWall(0,14.7,0,21.5); glassWall(0,23,0,D); // vãos de porta: recepção (na ponta do corredor de madeira) e sala executiva
+glassWall(0,D,W,D); glassWall(W,-12,W,D); glassWall(0,0.3,0,11.9); glassWall(0,14.7,0,21.5); glassWall(0,23,0,D); // vãos de porta: recepção (na ponta do corredor de madeira) e sala executiva
 /* recepção: cômodo vazio a oeste do andar, entre a parede do fundo e a sala executiva */
 {
   const x0=-18.5, x1=0, z0=-3.6, z1=16.5;
@@ -309,7 +309,8 @@ planter(54.9,5.7,1.2); planter(44.6,5.7,1.1);
 }
 box(world,.25,3.2,20,M.wall,0,0,-10);
 box(world,67.25,3.2,.25,M.wall,33.5,0,-20);
-box(world,.25,3.2,20,M.wall,67,0,-10);
+// parede leste: sólida só até a 2ª bancada da zona Leste; dali para o sul é vidro
+box(world,.25,3.2,8,M.wall,67,0,-16);
 // no lugar da parede entre a ala do fundo e a ala do quadro e TV: armário de madeira na metade da altura, portas dos dois lados
 box(world,.5,1.6,13,M.woodLight,50.2,0,-13.5);
 box(world,.54,.06,13.04,M.navy,50.2,1.6,-13.5);
