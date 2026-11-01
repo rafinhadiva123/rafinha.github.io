@@ -61,11 +61,19 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   sair.hidden = true;
   const ajuda = el('p', { classe: 'pa-ajuda' });
   ajuda.hidden = true;
+  /* no computador: as teclas no meio da tela, até apertar qualquer uma */
+  const tecla = (t, seta, extra = '') => `<span class="pa-tecla${extra}"><b>${t}</b>${seta ? `<i aria-hidden="true">${seta}</i>` : ''}</span>`;
+  const teclasAjuda = el('div', {
+    classe: 'pa-teclas', role: 'img',
+    'aria-label': 'Teclas do modo boneco: W para frente, A para a esquerda, S para trás, D para a direita, Shift corre, Esc sai',
+  }, `<div class="pa-wasd">${tecla('W', '↑', ' pa-w')}${tecla('A', '←', ' pa-a')}${tecla('S', '↓')}${tecla('D', '→')}</div>`
+    + `<div class="pa-extra"><span>${tecla('Shift', '', ' pa-larga')} corre</span><span>${tecla('Esc', '', ' pa-larga')} sai</span></div>`);
+  teclasAjuda.hidden = true;
   const joy = el('div', { classe: 'pa-joy', 'aria-hidden': 'true' });
   const pino = el('div', { classe: 'pa-pino' });
   joy.appendChild(pino);
   joy.hidden = true;
-  palco.append(boneco, fantasma, sair, ajuda, joy);
+  palco.append(boneco, fantasma, sair, ajuda, teclasAjuda, joy);
 
   /* ---- estado ---- */
   let ativo = false;
@@ -143,10 +151,9 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     mexido = true;
     andar.assumirCamera(quadro);
     sair.hidden = false;
-    ajuda.hidden = false;
-    ajuda.textContent = toqueFino.matches
-      ? 'Mexa o mouse para olhar · setas ou W A S D para andar · Shift corre · clique no chão para ir até lá · Esc sai'
-      : 'Joystick para andar · arraste para olhar · toque no chão para ir até lá';
+    teclasAjuda.hidden = !toqueFino.matches;
+    ajuda.hidden = toqueFino.matches;
+    ajuda.textContent = 'Joystick para andar · arraste para olhar · toque no chão para ir até lá';
     joy.hidden = toqueFino.matches;
     andar.renderer.domElement.focus({ preventScroll: true });
   }
@@ -156,7 +163,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     ativo = false;
     rota = null; teclas.clear(); joyX = joyY = 0; ultimo = null; borda = 0;
     mostrarMarca(null);
-    sair.hidden = ajuda.hidden = joy.hidden = true;
+    sair.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = true;
     boneco.hidden = false;
     palco.classList.remove('em-passeio');
     andar.assumirCamera(null);
@@ -274,6 +281,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   const fim = new AbortController();   /* parar() solta os ouvintes da janela */
   window.addEventListener('keydown', e => {
     if (!ativo || digitando(e.target)) return;
+    teclasAjuda.hidden = true;
     if (e.key === 'Escape') { e.preventDefault(); sairDoPasseio(); return; }
     const k = MAPA[e.key];
     if (k) { teclas.add(k); if (k !== 'Shift') e.preventDefault(); }
