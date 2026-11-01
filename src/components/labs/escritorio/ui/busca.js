@@ -1,6 +1,8 @@
 // Busca por apelido: digita um nome e a câmera vai até a pessoa. Sem
 // diferença de acento nem maiúscula ("joao" acha "João"), igual à regra de
 // apelido único do banco. Caixa de combinação acessível (setas, Enter, Esc).
+// Fechada é só uma lupa meio transparente no canto do andar; clicar nela abre
+// o campo, e o campo vazio fecha de novo ao perder o foco ou com Esc.
 // DOM puro; apelido só entra em textContent.
 import { chaveApelido } from '../planta/fixos.js';
 
@@ -47,16 +49,42 @@ export function criarBusca(raiz, { pessoas, ir }) {
   const lista = el('ul', { classe: 'bu-lista', id: 'bu-lista', role: 'listbox', 'aria-label': 'Pessoas encontradas' });
   lista.hidden = true;
   const campo = el('input', {
-    type: 'search', classe: 'bu-campo', id: 'bu-campo', placeholder: 'Buscar pelo apelido',
+    type: 'search', classe: 'bu-campo', id: 'bu-campo',
     autocomplete: 'off', spellcheck: 'false', enterkeyhint: 'search',
     role: 'combobox', 'aria-expanded': 'false', 'aria-controls': 'bu-lista', 'aria-autocomplete': 'list',
     'aria-label': 'Buscar pessoa pelo apelido',
   });
-  const lupa = el('span', { classe: 'bu-lupa', 'aria-hidden': 'true' });
-  lupa.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>';
+  campo.hidden = true;
+  const lupa = el('button', {
+    type: 'button', classe: 'bu-lupa', 'aria-label': 'Buscar pessoa pelo apelido',
+    'aria-expanded': 'false', 'aria-controls': 'bu-campo',
+  });
+  lupa.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>';
   const caixa = el('div', { classe: 'bu', role: 'search' });
   caixa.append(lupa, campo, lista);
   raiz.appendChild(caixa);
+
+  function abrir() {
+    caixa.classList.add('aberta');
+    campo.hidden = false;
+    lupa.setAttribute('aria-expanded', 'true');
+    campo.focus();
+  }
+
+  function fechar() {
+    fecharLista();
+    caixa.classList.remove('aberta');
+    campo.hidden = true;
+    lupa.setAttribute('aria-expanded', 'false');
+  }
+
+  lupa.addEventListener('click', () => {
+    if (campo.hidden) abrir();
+    else if (campo.value.trim()) campo.focus();
+    else { fechar(); lupa.focus(); }
+  });
+  /* clicar na lupa com o campo aberto não deve tirar o foco dele antes */
+  lupa.addEventListener('pointerdown', ev => { if (!campo.hidden) ev.preventDefault(); });
 
   let achados = [], marcado = -1;
 
@@ -99,7 +127,10 @@ export function criarBusca(raiz, { pessoas, ir }) {
 
   campo.addEventListener('input', () => { marcado = -1; desenhar(); });
   campo.addEventListener('focus', () => { if (campo.value.trim()) desenhar(); });
-  campo.addEventListener('blur', () => setTimeout(fecharLista, 120));
+  campo.addEventListener('blur', () => setTimeout(() => {
+    if (raiz.ownerDocument.activeElement === campo) return;
+    if (campo.value.trim()) fecharLista(); else fechar();
+  }, 120));
   campo.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       if (lista.hidden) desenhar();
@@ -113,13 +144,15 @@ export function criarBusca(raiz, { pessoas, ir }) {
       if (!achados.length) desenhar();
       escolher(Math.max(0, marcado));
     } else if (e.key === 'Escape') {
-      if (!lista.hidden) { e.stopPropagation(); fecharLista(); }
-      else if (campo.value) { campo.value = ''; }
+      e.stopPropagation();
+      if (!lista.hidden) fecharLista();
+      else if (campo.value) campo.value = '';
+      else { fechar(); lupa.focus(); }
     }
   });
 
   return {
-    focar() { campo.focus(); },
-    limpar() { campo.value = ''; fecharLista(); },
+    focar() { abrir(); },
+    limpar() { campo.value = ''; fechar(); },
   };
 }

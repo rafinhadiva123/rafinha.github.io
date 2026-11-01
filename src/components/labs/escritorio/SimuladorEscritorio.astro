@@ -17,7 +17,6 @@
 
   <div class="esc-barra" data-esc="barra" role="toolbar" aria-label="Ações do escritório">
     <p class="esc-convite">Procure sua cadeira e se acomode</p>
-    <div class="esc-busca" data-esc="busca"></div>
     <span class="esc-grupo esc-grupo--fim" data-so3d hidden>
       <button type="button" class="esc-b esc-b--disco" data-acao="discoteca" aria-pressed="false">Discoteca</button>
       <button type="button" class="esc-b" data-acao="tudo">Ver tudo</button>
@@ -78,10 +77,6 @@
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--texto);
-  }
-
-  .escritorio .esc-busca {
-    width: min(260px, 100%);
   }
 
   .escritorio .esc-grupo {
@@ -165,16 +160,10 @@
     background: var(--fundo);
   }
 
-  /* celular: o convite numa linha, a busca e os botões na de baixo */
+  /* celular: o convite numa linha, os botões na de baixo */
   @media (max-width: 560px) {
     .escritorio .esc-convite {
       flex-basis: 100%;
-    }
-
-    .escritorio .esc-busca {
-      flex: 1;
-      width: auto;
-      min-width: 0;
     }
 
     .escritorio .esc-grupo--fim {

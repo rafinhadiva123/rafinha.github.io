@@ -321,6 +321,12 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
 
   /* ----------------------------------------------------- fuga do armário */
 
+  /* velocidades em m/s */
+  const VEL_FUGITIVO = 3.5;
+  const VEL_PERSEGUIDOR = 3.8;   /* teto: ele desacelera se for preciso para chegar depois do fugitivo */
+  const VEL_VOLTA = 6;           /* o perseguidor volta disparado da saída até a cadeira (~5 s) */
+  const CHEGA_DEPOIS = 0.6;      /* s: quanto depois do fugitivo o perseguidor chega na saída */
+
   function iniciarFuga() {
     if (fuga) return { ok: false, msg: 'A fuga ainda está acontecendo.' };
     const A = PONTOS.armarioJuridico, S = PONTOS.saida;
@@ -331,7 +337,7 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
     fuga = { pendentes: 0, t0: performance.now() / 1000 };
     fuga.pendentes++;
     const w0 = criarPasseio({
-      c, pontos: rotaAte(inicio, S), vel: 2.5, amp: 1, atraso: 0.4, esq,
+      c, pontos: rotaAte(inicio, S), vel: VEL_FUGITIVO, amp: 1, atraso: 0.4, esq,
       aoChegar: () => {
         fuga.pendentes--;
         if (fuga.espera) { fuga.espera.quem.est.busy = null; fuga.espera = null; fuga.pendentes--; }   /* nunca passou por ele */
@@ -355,10 +361,20 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
     const cp = F.fazCorredor({ pele: quem.p.pele, camisa: quem.p.camisa, calca: '#3A3F47', esc: quem.p.altura || 0.86, cabeca: F.cabecaDe(quem.rig.cab) });
     cp.g.userData.pessoa = quem.nome;
     const a = ancora(l), e0 = entradaDe(l);
-    criarPasseio({
-      c: cp, pontos: [a, e0, ...(caminho(grade, e0, S) || [S])], vel: 2.9, amp: 1, atraso: 0.2, pulo: true,
+    const atraso = 0.2;
+    const w = criarPasseio({
+      c: cp, pontos: [a, e0, ...(caminho(grade, e0, S) || [S])], vel: VEL_PERSEGUIDOR, amp: 1, atraso, pulo: true,
       aoChegar: () => { fuga.pendentes--; voltarParaCadeira(quem); verificarFim(); },
     });
+    /* ele sempre chega na saída depois do fugitivo: se correndo no teto
+       chegaria antes, corre um pouco mais devagar */
+    const f = fuga.fugitivo;
+    if (f && !f.fim) {
+      const agora = performance.now() / 1000;
+      const faltaFugitivo = Math.max(0, f.t0 - agora) + (f.total - f.d) / f.vel;
+      const tempo = faltaFugitivo + CHEGA_DEPOIS - atraso;
+      if (tempo > 0) w.vel = Math.min(VEL_PERSEGUIDOR, w.total / tempo);
+    }
   }
   /** O fugitivo passou por trás dele? (a menos de 3 m, ou já passou do ponto mais perto) */
   function verificarPerseguidor() {
@@ -378,7 +394,7 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
     const S = PONTOS.saida, e0 = entradaDe(l);
     fuga.pendentes++;
     criarPasseio({
-      c, pontos: [S, ...(caminho(grade, S, e0) || [e0]), ancora(l)], vel: 1.6, amp: 0.7,
+      c, pontos: [S, ...(caminho(grade, S, e0) || [e0]), ancora(l)], vel: VEL_VOLTA, amp: 1,
       aoChegar: () => { sentar(p, p.lugar); fuga.pendentes--; verificarFim(); },
     });
   }

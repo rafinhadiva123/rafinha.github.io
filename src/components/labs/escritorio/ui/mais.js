@@ -5,7 +5,7 @@
 // reaproveitados de quadro em quadro.
 import { LUGARES, LUGAR, nomeDaArea } from '../planta/lugares.js';
 
-export const PERTO = 30;      /* distância câmera → alvo, em metros, para mostrar os "+" */
+export const PERTO = 16;      /* distância câmera → alvo, em metros, para mostrar os "+": zoom de umas três bancadas na tela */
 /* mais perto que isso é a vista de retrato (busca, editor): os "+" das
    cadeiras de trás cairiam em cima dos nomes, então somem; o clique direto
    na cadeira livre continua valendo. */

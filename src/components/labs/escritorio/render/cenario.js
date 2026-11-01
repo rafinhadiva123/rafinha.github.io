@@ -84,7 +84,7 @@ function glassWall(x0,z0,x1,z1){
     const t=i/steps; box(world,0.08,2.85,0.1,M.dark,x0+(x1-x0)*t,0.35,z0+(z1-z0)*t,-ang,true);
   }
 }
-glassWall(0,D,W,D); glassWall(W,0,W,D); glassWall(0,0.3,0,11.9); glassWall(0,14.7,0,21.5); glassWall(0,23,0,D); // vãos de porta: recepção (na ponta do corredor de madeira) e sala executiva
+glassWall(0,D,W,D); glassWall(W,-12,W,D); glassWall(0,0.3,0,11.9); glassWall(0,14.7,0,21.5); glassWall(0,23,0,D); // vãos de porta: recepção (na ponta do corredor de madeira) e sala executiva
 /* recepção: cômodo vazio a oeste do andar, entre a parede do fundo e a sala executiva */
 {
   const x0=-18.5, x1=0, z0=-3.6, z1=16.5;
@@ -176,10 +176,6 @@ patch(1.9,-2.4,34,-0.6,woodFloor,0.012);
   m.position.set(7.08,1.75,7.02); world.add(m); }
 box(world,6.2,3.2,8.7,M.core,29.9,0,4.65);
 box(world,.35,3.2,4.2,M.navy,14.2,0,9.1);
-/* copa */
-box(world,3,.9,.65,M.wood,16.9+1.1,0,7.35);
-box(world,3,.8,.38,M.wood,18,1.7,7.2);
-box(world,.6,1.9,.6,M.white,15.2+.3,0,7.4);
 box(world,.12,3.2,4,M.white,19.6,0,9);
 /* duas salas com vidro fumê */
 for(const x0 of [19.6,23.2]){
@@ -257,8 +253,19 @@ function longSofa(x,z,ry,len){
   world.add(g);
 }
 longSofa(49.8,2.6,0,8.4); longSofa(49.8,8.8,Math.PI,8.4);
+/* cantinho entre o painel verde e a 1ª sala de vidro fumê: um sofazinho
+   encostado em cada parede, frente a frente, e uma mesinha de madeira clara no meio */
+longSofa(14.84,9.1,Math.PI/2,1.8); longSofa(19.09,9.1,-Math.PI/2,1.8);
+box(world,.7,.4,1,M.woodLight,16.97,0,9.1);
 box(world,4.2,.4,.9,M.woodLight,49.8,0,5.7);
 planter(54.9,5.7,1.2); planter(44.6,5.7,1.1);
+/* mesa redonda branca no corredor entre o lounge dos sofás e as bancadas da
+   zona Leste, com folhas saindo de um vaso embutido no meio do tampo */
+{ const x=57.6, z=-0.4;
+  cyl(world,.75,.05,M.white,x,.72,z,32); cyl(world,.1,.72,M.white,x,0,z,12); cyl(world,.4,.03,M.white,x,0,z,24);
+  cyl(world,.2,.08,M.dark,x,.77,z,16);
+  const folha=(r,mat,dx,dy,dz)=>{ const f=new THREE.Mesh(new THREE.IcosahedronGeometry(r,0),mat); f.position.set(x+dx,.77+dy,z+dz); f.castShadow=true; world.add(f); };
+  folha(.3,M.green,0,.3,0); folha(.22,M.green2,.16,.52,-.08); folha(.2,M.green2,-.17,.42,.12); }
 /* sala executiva: cômodo extra anexo à parede oeste */
 {
   const f=new THREE.Mesh(new THREE.BoxGeometry(10,0.1,11.5),M.concrete); f.position.set(-5,-0.05,22.25); f.receiveShadow=true; world.add(f);
@@ -309,7 +316,8 @@ planter(54.9,5.7,1.2); planter(44.6,5.7,1.1);
 }
 box(world,.25,3.2,20,M.wall,0,0,-10);
 box(world,67.25,3.2,.25,M.wall,33.5,0,-20);
-box(world,.25,3.2,20,M.wall,67,0,-10);
+// parede leste: sólida só até a 2ª bancada da zona Leste; dali para o sul é vidro
+box(world,.25,3.2,8,M.wall,67,0,-16);
 // no lugar da parede entre a ala do fundo e a ala do quadro e TV: armário de madeira na metade da altura, portas dos dois lados
 box(world,.5,1.6,13,M.woodLight,50.2,0,-13.5);
 box(world,.54,.06,13.04,M.navy,50.2,1.6,-13.5);
