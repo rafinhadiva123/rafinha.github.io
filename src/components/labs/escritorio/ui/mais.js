@@ -3,6 +3,8 @@
 // cadeiras livres em volta do ponto que ela olha, até um limite, os mais
 // próximos primeiro. São botões de verdade (dá para usar com Tab e Enter),
 // reaproveitados de quadro em quadro.
+// Quem já sentou não vê os "+" (só enquanto muda de cadeira); no lugar, ganha
+// um lápis em cima da própria cadeira, que abre o editor do personagem.
 import { LUGARES, LUGAR, nomeDaArea } from '../planta/lugares.js';
 
 export const PERTO = 16;      /* distância câmera → alvo, em metros, para mostrar os "+": zoom de umas três bancadas na tela */
@@ -39,9 +41,11 @@ export function lugaresComMais({ ocupados, alvo, distancia, lugares = LUGARES, p
  * @param camada  elemento por cima do canvas (position:absolute; inset:0)
  * @param andar   o que criarAndar devolve
  * @param opcoes.ocupados()  Set de ids ocupados agora
- * @param opcoes.escolher(id) clicou no "+"
+ * @param opcoes.escolher(id) clicou no "+" ou no lápis
+ * @param opcoes.mostrarMais()  false esconde os "+" (quem já sentou)
+ * @param opcoes.meuLugar()     cadeira da própria pessoa, para o lápis
  */
-export function criarMais(camada, andar, { ocupados, escolher }) {
+export function criarMais(camada, andar, { ocupados, escolher, mostrarMais = () => true, meuLugar = () => null }) {
   const pool = [];
   let ativos = [];           /* ids com botão agora */
   let ligado = true;
@@ -59,8 +63,30 @@ export function criarMais(camada, andar, { ocupados, escolher }) {
     return b;
   }
 
+  /* o lápis da própria cadeira: aparece de perto, inclusive na vista de retrato */
+  const lapis = document.createElement('button');
+  lapis.type = 'button';
+  lapis.className = 'mais mais-lapis';
+  lapis.hidden = true;
+  lapis.title = 'Editar meu personagem';
+  lapis.setAttribute('aria-label', 'Editar meu personagem');
+  lapis.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
+  lapis.addEventListener('click', ev => { ev.stopPropagation(); if (lapis.dataset.lugar) escolher(lapis.dataset.lugar); });
+  camada.appendChild(lapis);
+
+  function posicionarLapis() {
+    const id = ligado ? meuLugar() : null;
+    const l = id && LUGAR.get(id);
+    if (!l || !(andar.distancia() <= PERTO)) { lapis.hidden = true; delete lapis.dataset.lugar; return; }
+    lapis.dataset.lugar = id;
+    /* na altura do assento, como os "+": mais alto cobriria o nome */
+    const p = andar.projetar(l.x, ALTURA + (l.dy || 0), l.z);
+    lapis.hidden = !p.visivel;
+    if (p.visivel) lapis.style.translate = `${p.x}px ${p.y}px`;
+  }
+
   function escolherQuais() {
-    const ids = ligado ? lugaresComMais({ ocupados: ocupados(), alvo: andar.alvo(), distancia: andar.distancia() }) : [];
+    const ids = ligado && mostrarMais() ? lugaresComMais({ ocupados: ocupados(), alvo: andar.alvo(), distancia: andar.distancia() }) : [];
     const chave = ids.join('|');
     if (chave === ultimaChave) return;
     ultimaChave = chave;
@@ -78,6 +104,7 @@ export function criarMais(camada, andar, { ocupados, escolher }) {
 
   function posicionar() {
     escolherQuais();
+    posicionarLapis();
     ativos.forEach((id, k) => {
       const l = LUGAR.get(id), b = pool[k];
       const p = andar.projetar(l.x, ALTURA + (l.dy || 0), l.z);

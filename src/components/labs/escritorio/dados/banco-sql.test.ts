@@ -116,6 +116,15 @@ describe('sentar', () => {
     expect(r.rows).toEqual([{ apelido: 'Repetido' }])
   })
 
+  test('o dono edita apelido e visual sem sair da cadeira; os outros não mexem nele', async () => {
+    const novo = { ...PADRAO, oculos: 'redondo' }
+    await sentar(B, 'centro-1-O-2', 'Bia Lima', novo)
+    const r = await db.query(`select apelido, visual from public.escritorio_personagens where lugar = 'centro-1-O-2'`)
+    expect(r.rows).toEqual([{ apelido: 'Bia Lima', visual: novo }])
+    expect(await erroDe(sentar(A, 'centro-1-O-2', 'Invasor'))).toBe('lugar_ocupado')
+    await sentar(B, 'centro-1-O-2', 'Bia')
+  })
+
   test('cadeira ocupada ou de personagem fixo não pode', async () => {
     expect(await erroDe(sentar(A, 'centro-1-O-2', 'Repetido'))).toBe('lugar_ocupado')
     expect(await erroDe(sentar(A, 'nordeste-2-L-3', 'Repetido'))).toBe('lugar_ocupado')

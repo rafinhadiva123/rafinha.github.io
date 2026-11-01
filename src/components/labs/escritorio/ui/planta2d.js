@@ -375,16 +375,29 @@ export function criarPlanta(palco) {
 }
 
 /* No 3D os "+" aparecem perto da câmera; na planta toda cadeira livre é botão. */
-function criarMaisPlanta(_camada, planta, { escolher, avisar = () => {} }) {
+function criarMaisPlanta(camada, planta, { escolher, avisar = () => {}, meuLugar = () => null, mostrarMais = () => true }) {
   let ligado = true;
+  const palco = camada && camada.parentElement;
+  /* quem já sentou não vê os "+" (só enquanto muda de cadeira); a própria
+     cadeira fica marcada, porque é nela que se abre o editor */
+  function atualizar() {
+    if (!palco || !palco.querySelectorAll) return;
+    palco.classList.toggle('p2-sem-mais', !mostrarMais());
+    const id = meuLugar();
+    for (const g of palco.querySelectorAll('.p2-cad.minha')) if (g.dataset.lugar !== id) g.classList.remove('minha');
+    const minha = id && palco.querySelector(`.p2-cad[data-lugar="${CSS.escape(id)}"]`);
+    if (minha) minha.classList.add('minha');
+  }
   planta.aoAtivar(id => {
     const o = planta.ocupante(id);
+    /* cadeira livre ou a própria: o núcleo decide se abre o editor (e avisa se não) */
     if (!o) { escolher(id); return; }
     if (o.previa) return;                       /* o editor já está aberto nela */
+    if (id === meuLugar()) { escolher(id); return; }
     if (ligado) planta.selecionar(id);
     avisar(`${o.apelido} senta aqui.`);
   });
-  return { ligar(sim) { ligado = sim; }, atualizar() {}, parar() { planta.aoAtivar(() => {}); } };
+  return { ligar(sim) { ligado = sim; atualizar(); }, atualizar, parar() { planta.aoAtivar(() => {}); } };
 }
 
 const UI_PLANTA = {

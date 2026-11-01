@@ -66,6 +66,16 @@ describe('sentar numa cadeira livre (caminho do teclado)', () => {
     expect(editores.at(-1).lugar).toBe(lugar)
     n.parar()
   })
+  test('quem já sentou abre o próprio personagem, na cadeira dele', async () => {
+    const { ui, editores } = telaMinima()
+    const eu = { lugar: 'sul-1-L-1', apelido: 'Ana', visual: PADRAO }
+    const banco = { modo: 'falso', meu: async () => eu, listar: async () => [eu], aoMudar: () => () => {}, sentar: async () => eu }
+    const n = criarNucleo({} as any, banco, { ui })
+    await n.pronto
+    expect(n.sentarEmLivre()).toBe('sul-1-L-1')
+    expect(editores.at(-1)).toMatchObject({ lugar: 'sul-1-L-1', meu: eu })
+    n.parar()
+  })
   test('lotado: avisa e não abre nada', async () => {
     const { ui, editores } = telaMinima()
     const cheio = { modo: 'falso', meu: async () => null, aoMudar: () => () => {}, sentar: async () => ({}),

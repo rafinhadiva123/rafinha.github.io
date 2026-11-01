@@ -106,7 +106,11 @@ export function criarBancoSupabase({ url, chave }, { cliente, tempoLimite = 1500
       }
       throw erro(MENSAGENS[error.message] ? error.message : 'rede');
     }
+    /* atualiza a lista na hora: sem isso, editar duas vezes seguidas antes da
+       lista chegar de novo esbarrava no próprio apelido antigo */
+    const antes = cacheMeu && chaveApelido(cacheMeu.apelido);
     cacheMeu = { lugar, apelido: (data && data.apelido) || apelido, visual };
+    ultimos = ultimos.filter(o => o.lugar !== lugar && chaveApelido(o.apelido) !== antes).concat(cacheMeu);
     return cacheMeu;
   }
 

@@ -3,7 +3,7 @@ import { criarBancoSupabase, criarBancoLocal, sanearLinhas, MENSAGENS } from './
 import { PADRAO } from '../visual.js'
 
 /* um Supabase de mentira, com o mesmo formato de resposta do de verdade */
-function clienteFalso({ linhas = [] as unknown[], sessao = false, erroRpc = null as null | string, erroLogin = null as null | number } = {}) {
+function clienteFalso({ linhas = [] as unknown[], sessao = false, erroRpc = null as null | string, erroLogin = null as null | number, meu = null as unknown } = {}) {
   const chamadas: string[] = []
   const cliente = {
     auth: {
@@ -19,7 +19,7 @@ function clienteFalso({ linhas = [] as unknown[], sessao = false, erroRpc = null
     rpc: async (nome: string, args: { p_apelido: string }) => {
       chamadas.push(nome)
       if (erroRpc) return { data: null, error: { message: erroRpc } }
-      return { data: nome === 'escritorio_sentar' ? { apelido: args.p_apelido } : null, error: null }
+      return { data: nome === 'escritorio_sentar' ? { apelido: args.p_apelido } : nome === 'escritorio_meu' ? meu : null, error: null }
     },
     channel: () => ({ on() { return this }, subscribe() { return this } }),
     removeChannel: vi.fn(),
@@ -63,6 +63,19 @@ describe('banco online', () => {
     expect(chamadas).toEqual([])
   })
 
+  test('o dono edita o próprio personagem sem sair da cadeira, várias vezes seguidas', async () => {
+    const ana = { lugar: 'sul-1-L-1', apelido: 'Ana', visual: PADRAO }
+    const { cliente, chamadas } = clienteFalso({ sessao: true, linhas: [ana], meu: ana })
+    const b = criarBancoSupabase({ url: '', chave: '' }, { cliente })
+    await b.listar()
+    await b.meu()
+    const novo = { ...PADRAO, oculos: 'redondo' }
+    expect(await b.sentar('sul-1-L-1', 'Ana Luiza', novo)).toEqual({ lugar: 'sul-1-L-1', apelido: 'Ana Luiza', visual: novo })
+    /* a lista ainda não chegou de novo: não pode esbarrar no apelido antigo */
+    expect(await b.sentar('sul-1-L-1', 'ANA', PADRAO)).toMatchObject({ apelido: 'ANA' })
+    expect(chamadas).toEqual(['escritorio_meu', 'escritorio_sentar', 'escritorio_sentar'])
+  })
+
   test('erro do banco vira mensagem em português', async () => {
     const { cliente } = clienteFalso({ sessao: true, erroRpc: 'lugar_ocupado' })
     const b = criarBancoSupabase({ url: '', chave: '' }, { cliente })
@@ -99,6 +112,17 @@ describe('banco local', () => {
     expect(await b.listar()).toEqual([{ lugar: 'sul-1-L-2', apelido: 'Ana', visual: PADRAO }])
     expect(await b.meu()).toMatchObject({ lugar: 'sul-1-L-2' })
     expect(avisos).toBe(2)
+  })
+
+  test('o dono edita apelido e visual na mesma cadeira', async () => {
+    const mem = new Map<string, string>()
+    const armazenamento = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v) }
+    const b = criarBancoLocal(armazenamento)
+    const novo = { ...PADRAO, oculos: 'redondo' }
+    await b.sentar('sul-1-L-1', 'Ana', PADRAO)
+    await b.sentar('sul-1-L-1', 'Ana Luiza', novo)
+    expect(await b.listar()).toEqual([{ lugar: 'sul-1-L-1', apelido: 'Ana Luiza', visual: novo }])
+    expect(await b.meu()).toMatchObject({ apelido: 'Ana Luiza', visual: novo })
   })
 
   test('excluir tira o meu personagem e libera o apelido', async () => {
