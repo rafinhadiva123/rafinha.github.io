@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { criarEscritorio, montarOcupantes, MSG_CARGA, MSG_CONFLITO } from './escritorio.js'
+import { criarEscritorio, montarOcupantes, MSG_CARGA, MSG_CONFLITO, msgExcluido } from './escritorio.js'
 import { ErroBanco, MENSAGENS } from '../dados/banco.js'
 import { FIXOS, chaveApelido, APELIDOS_RESERVADOS } from '../planta/fixos.js'
 import { LUGARES } from '../planta/lugares.js'
@@ -37,6 +37,14 @@ function bancoFalso(iniciais: { lugar: string; apelido: string }[] = []) {
       eu = novo
       avisar()
       return { ...novo }
+    },
+    async sair() {
+      if (caiu) throw caiu
+      if (!eu) return false
+      lista = lista.filter(p => p.apelido !== eu.apelido)
+      eu = null
+      avisar()
+      return true
     },
     aoMudar(fn: () => void) { ouvintes.add(fn); return () => ouvintes.delete(fn) },
   }
@@ -160,6 +168,45 @@ describe('controlador com banco falso', () => {
     expect(minhas.map(p => p.lugar)).toEqual([b])
     expect(tela.mapas.at(-1).has(a)).toBe(false)
     expect(tela.mapas.at(-1).has(b)).toBe(true)
+  })
+
+  test('excluir meu personagem: só aparece para quem já tem; some da cadeira e o apelido fica livre', async () => {
+    const banco = bancoFalso()
+    const { ctrl, tela } = await montar(banco)
+    const a = lugarLivre(0), b = lugarLivre(1)
+    tela.escolher(a)
+    expect(tela.editores.at(-1).opc.excluir).toBeNull()
+    await tela.editores.at(-1).salvar('Ana', visual)
+
+    tela.escolher(b)
+    const ed = tela.editores.at(-1)
+    expect(typeof ed.opc.excluir).toBe('function')
+    await ed.opc.excluir()
+
+    expect(await banco.listar()).toEqual([])
+    expect(ctrl.meu).toBeNull()
+    expect(ctrl.aberto).toBe(false)
+    expect(tela.mapas.at(-1).has(a)).toBe(false)
+    expect(tela.mapas.at(-1).has(b)).toBe(false)
+    expect(tela.aviso.textContent).toBe(msgExcluido('Ana'))
+    /* depois pode criar outro do zero, até com o mesmo apelido */
+    tela.escolher(b)
+    expect(tela.editores.at(-1).opc.meu).toBeNull()
+    await tela.editores.at(-1).salvar('Ana', visual)
+    expect((await banco.listar()).map(p => p.lugar)).toEqual([b])
+  })
+
+  test('excluir com o banco fora do ar: lança e o personagem continua', async () => {
+    const banco = bancoFalso()
+    const { ctrl, tela } = await montar(banco)
+    tela.escolher(lugarLivre(0))
+    await tela.editores.at(-1).salvar('Ana', visual)
+    tela.escolher(lugarLivre(1))
+    banco.quebrar(true)
+    await expect(tela.editores.at(-1).opc.excluir()).rejects.toThrow()
+    banco.quebrar(false)
+    expect(ctrl.meu?.apelido).toBe('Ana')
+    expect((await banco.listar()).map(p => p.apelido)).toEqual(['Ana'])
   })
 
   test('apelido em uso (com outro jeito de escrever) e apelido reservado: recusa e o editor continua aberto', async () => {

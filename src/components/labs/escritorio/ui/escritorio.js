@@ -10,7 +10,7 @@ import { abrirEditor } from './editor.js';
 import { criarPiadas } from '../piadas/index.js';
 import { criarNucleo, montarCamadas } from './nucleo.js';
 
-export { montarOcupantes, montarCamadas, fraseChegada, MSG_CARGA, MSG_CONFLITO, MSG_LOTADO } from './nucleo.js';
+export { montarOcupantes, montarCamadas, fraseChegada, MSG_CARGA, MSG_CONFLITO, MSG_LOTADO, msgExcluido } from './nucleo.js';
 
 const UI_3D = { criarAndar, criarMais, criarBusca, criarPasseio, abrirEditor, montarCamadas, criarPiadas };
 

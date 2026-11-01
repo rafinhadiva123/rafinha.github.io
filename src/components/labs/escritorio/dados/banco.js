@@ -6,6 +6,7 @@
 //   listar()                     → [{lugar, apelido, visual}] dos visitantes
 //   meu()                        → {lugar, apelido, visual} | null
 //   sentar(lugar, apelido, vis.) → salva (ou muda de cadeira); lança ErroBanco
+//   sair()                       → exclui o personagem deste navegador; lança ErroBanco
 //   aoMudar(fn)                  → chama fn quando alguém senta; devolve "parar"
 //
 // Tudo que vem do banco passa pela limpeza de visual.js antes de chegar na
@@ -140,6 +141,27 @@ export function criarBancoSupabase({ url, chave }, { cliente, tempoLimite = 1500
       }
     },
 
+    async sair() {
+      if (!(await temSessao())) { cacheMeu = null; return false; }
+      const chamar = async deNovo => {
+        const { data, error } = await sb.rpc('escritorio_sair');
+        if (!error) return Boolean(data);
+        if (sessaoVencida(error) && !deNovo && sb.auth.refreshSession) {
+          const { error: falhou } = await sb.auth.refreshSession();
+          if (falhou) throw erro('sem_sessao');
+          return chamar(true);
+        }
+        throw erro(MENSAGENS[error.message] ? error.message : 'rede');
+      };
+      try {
+        const saiu = await comLimite(chamar(false), tempoLimite);
+        cacheMeu = null;
+        return saiu;
+      } catch (e) {
+        throw e instanceof ErroBanco ? e : erro('rede');
+      }
+    },
+
     aoMudar(fn) {
       let espera = 0;
       const avisa = () => { clearTimeout(espera); espera = setTimeout(fn, 250); };
@@ -180,6 +202,15 @@ export function criarBancoLocal(armazenamento = globalThis.localStorage) {
       gravar(d);
       ouvintes.forEach(f => f());
       return novo;
+    },
+    async sair() {
+      const d = ler();
+      if (!d.meu) return false;
+      d.lista = d.lista.filter(p => p.apelido !== d.meu);
+      d.meu = null;
+      gravar(d);
+      ouvintes.forEach(f => f());
+      return true;
     },
     aoMudar(fn) {
       ouvintes.add(fn);

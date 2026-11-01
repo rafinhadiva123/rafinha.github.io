@@ -45,8 +45,9 @@ function el(tag, attrs = {}, filhos = []) {
  * @param opcoes.mudou(apelido, visual)   prévia ao vivo
  * @param opcoes.salvar(apelido, visual)  Promise; lança erro com .message
  * @param opcoes.fechar()                 cancelou
+ * @param opcoes.excluir()                Promise; exclui o personagem (só quando já tem)
  */
-export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, aleatorio = Math.random }) {
+export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, excluir = null, aleatorio = Math.random }) {
   let visual = meu ? sanearVisual(meu.visual) : sortearVisual(aleatorio);
   let enviando = false, fechado = false;
   raiz.replaceChildren();
@@ -92,6 +93,7 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, aleatorio
     ]),
     grupos,
     el('div', { classe: 'ed-acoes' }, [sortear, confirmar]),
+    meu && excluir ? blocoExcluir() : null,
   ]);
   form.addEventListener('submit', async ev => {
     ev.preventDefault();
@@ -113,6 +115,38 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, aleatorio
     }
   });
   raiz.appendChild(form);
+
+  /* excluir pede confirmação no próprio painel, sem janela do navegador */
+  function blocoExcluir() {
+    const aviso = el('p', { classe: 'ed-conf-texto', id: 'ed-conf-texto' });
+    aviso.textContent = `Excluir ${meu.apelido} de vez? Ele some para todo mundo e a cadeira e o apelido ficam livres. Não dá para desfazer.`;
+    const erroExcluir = el('p', { classe: 'ed-erro', role: 'alert' });
+    const sim = el('button', { type: 'button', classe: 'ed-perigo-pri', texto: 'Sim, excluir meu personagem' });
+    const nao = el('button', { type: 'button', classe: 'ed-sec', texto: 'Não, manter' });
+    const confirma = el('div', { classe: 'ed-confirma', role: 'group', 'aria-labelledby': 'ed-conf-texto', hidden: true }, [
+      aviso, erroExcluir, el('div', { classe: 'ed-acoes' }, [nao, sim]),
+    ]);
+    const pedir = el('button', { type: 'button', classe: 'ed-perigo', texto: 'Excluir meu personagem' });
+    pedir.addEventListener('click', () => { pedir.hidden = true; confirma.hidden = false; nao.focus(); });
+    nao.addEventListener('click', () => { confirma.hidden = true; pedir.hidden = false; erroExcluir.textContent = ''; pedir.focus(); });
+    sim.addEventListener('click', async () => {
+      if (enviando) return;
+      enviando = true;
+      erroExcluir.textContent = '';
+      sim.disabled = nao.disabled = confirmar.disabled = sortear.disabled = true;
+      sim.textContent = 'Excluindo…';
+      try {
+        await excluir();
+        fecharPainel();
+      } catch (e) {
+        enviando = false;
+        sim.disabled = nao.disabled = confirmar.disabled = sortear.disabled = false;
+        sim.textContent = 'Sim, excluir meu personagem';
+        erroExcluir.textContent = (e && e.message) || 'Não deu para excluir agora. Tente de novo.';
+      }
+    });
+    return el('div', { classe: 'ed-excluir' }, [pedir, confirma]);
+  }
 
   function desenhar() {
     grupos.replaceChildren();
