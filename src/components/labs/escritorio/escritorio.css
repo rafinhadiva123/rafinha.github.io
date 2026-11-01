@@ -45,10 +45,6 @@
 .esc-palco .mais:hover { background: var(--destaque, #24306b); color: var(--fundo, #fff); transform: translate(-50%, -50%) scale(1.12); }
 .esc-palco .mais:focus-visible { outline: 2px solid var(--destaque, #24306b); outline-offset: 3px; }
 
-/* lápis em cima da própria cadeira: abre "Editar seu personagem" */
-.esc-palco .mais-lapis { background: var(--destaque, #24306b); color: var(--fundo, #fff); }
-.esc-palco .mais-lapis svg { width: 15px; height: 15px; stroke-width: 2; stroke-linejoin: round; }
-
 /* ---- busca por apelido ----
    fechada é só a lupa, meio transparente, no canto de cima à esquerda */
 .esc-palco .bu-raiz { position: absolute; left: 12px; top: 12px; z-index: 3; width: min(280px, calc(100% - 24px)); pointer-events: none; }
