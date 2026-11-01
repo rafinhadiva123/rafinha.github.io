@@ -324,7 +324,7 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
   /* velocidades em m/s */
   const VEL_FUGITIVO = 3.5;
   const VEL_PERSEGUIDOR = 3.8;   /* teto: ele desacelera se for preciso para chegar depois do fugitivo */
-  const VEL_VOLTA = 1.6;         /* o perseguidor voltando da saída até a cadeira */
+  const VEL_VOLTA = 6;           /* o perseguidor volta disparado da saída até a cadeira (~5 s) */
   const CHEGA_DEPOIS = 0.6;      /* s: quanto depois do fugitivo o perseguidor chega na saída */
 
   function iniciarFuga() {
@@ -394,7 +394,7 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
     const S = PONTOS.saida, e0 = entradaDe(l);
     fuga.pendentes++;
     criarPasseio({
-      c, pontos: [S, ...(caminho(grade, S, e0) || [e0]), ancora(l)], vel: VEL_VOLTA, amp: 0.7,
+      c, pontos: [S, ...(caminho(grade, S, e0) || [e0]), ancora(l)], vel: VEL_VOLTA, amp: 1,
       aoChegar: () => { sentar(p, p.lugar); fuga.pendentes--; verificarFim(); },
     });
   }
