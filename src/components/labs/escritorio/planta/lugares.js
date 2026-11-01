@@ -54,6 +54,14 @@ export function descreverLugar(id) {
   return `${NOME_ZONA.get(l.zona)} · bancada ${l.bancada} · lado ${NOME_LADO[l.lado]} · cadeira ${l.pos}`;
 }
 
+/** O que dá para mostrar na tela sobre a cadeira, sem zona nem número de
+    bancada: o nome da área para as avulsas ("Recepção"), null para as de
+    bancada. As zonas existem só por dentro (nomes das cadeiras). */
+export function nomeDaArea(id) {
+  const l = LUGAR.get(id);
+  return l && !l.zona ? NOME_ZONA.get(l.area) || null : null;
+}
+
 /** Compara dois layouts: quais cadeiras somem e quais aparecem. */
 export function compararLayouts(antes, depois) {
   const a = new Set(antes.map(l => l.id));

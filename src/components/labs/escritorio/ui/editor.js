@@ -3,7 +3,7 @@
 // `salvar` e mostra o erro em português se o banco recusar.
 // DOM puro; o apelido só entra em textContent/value, nunca como HTML.
 import { OPCOES, APELIDO_MAX, sortearVisual, sanearApelido, sanearVisual } from '../visual.js';
-import { descreverLugar } from '../planta/lugares.js';
+import { nomeDaArea } from '../planta/lugares.js';
 
 export const GRUPOS = [
   { chave: 'pele', rot: 'Pele', tipo: 'cor' },
@@ -53,12 +53,13 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, aleatorio
   raiz.hidden = false;
 
   const titulo = el('h2', { classe: 'ed-titulo', id: 'ed-titulo', texto: meu ? 'Mudar de cadeira' : 'Monte seu personagem' });
-  const onde = descreverLugar(lugar) || lugar;
+  /* sem zona nem número de bancada na tela; só o nome da área, quando tem */
+  const area = nomeDaArea(lugar);
   const sub = el('p', {
     classe: 'ed-sub',
     texto: meu
-      ? `Você vai para ${onde}. A cadeira de antes fica livre.`
-      : `${onde}. Fica salvo para todo mundo que abrir o escritório.`,
+      ? `${area ? `Você vai para a ${area}. ` : ''}A cadeira de antes fica livre.`
+      : `${area ? `${area}. ` : ''}Fica salvo para todo mundo que abrir o escritório.`,
   });
   const btnFechar = el('button', { type: 'button', classe: 'ed-fechar', 'aria-label': 'Cancelar e fechar', texto: '×', onclick: () => sair() });
 
