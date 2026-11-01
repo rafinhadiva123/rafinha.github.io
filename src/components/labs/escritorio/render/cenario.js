@@ -176,10 +176,6 @@ patch(1.9,-2.4,34,-0.6,woodFloor,0.012);
   m.position.set(7.08,1.75,7.02); world.add(m); }
 box(world,6.2,3.2,8.7,M.core,29.9,0,4.65);
 box(world,.35,3.2,4.2,M.navy,14.2,0,9.1);
-/* copa */
-box(world,3,.9,.65,M.wood,16.9+1.1,0,7.35);
-box(world,3,.8,.38,M.wood,18,1.7,7.2);
-box(world,.6,1.9,.6,M.white,15.2+.3,0,7.4);
 box(world,.12,3.2,4,M.white,19.6,0,9);
 /* duas salas com vidro fumê */
 for(const x0 of [19.6,23.2]){
@@ -257,6 +253,10 @@ function longSofa(x,z,ry,len){
   world.add(g);
 }
 longSofa(49.8,2.6,0,8.4); longSofa(49.8,8.8,Math.PI,8.4);
+/* cantinho entre o painel verde e a 1ª sala de vidro fumê: um sofazinho
+   encostado em cada parede, frente a frente, e uma mesinha de madeira clara no meio */
+longSofa(14.84,9.1,Math.PI/2,1.8); longSofa(19.09,9.1,-Math.PI/2,1.8);
+box(world,.7,.4,1,M.woodLight,16.97,0,9.1);
 box(world,4.2,.4,.9,M.woodLight,49.8,0,5.7);
 planter(54.9,5.7,1.2); planter(44.6,5.7,1.1);
 /* sala executiva: cômodo extra anexo à parede oeste */
