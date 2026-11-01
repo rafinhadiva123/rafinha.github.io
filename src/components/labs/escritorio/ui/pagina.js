@@ -24,11 +24,14 @@ async function criarBanco(local) {
 }
 
 /**
- * @param raiz  o elemento .escritorio da página, com [data-esc="palco"] dentro
+ * @param raiz  o elemento .escritorio da página, com [data-esc="palco"] e
+ *              [data-esc="barra"] dentro
  * @returns Promise do controle {versao, trocar(versao), parar()}
  */
 export async function iniciarPagina(raiz) {
   const palco = raiz.querySelector('[data-esc="palco"]');
+  const barra = raiz.querySelector('[data-esc="barra"]');
+  const botao = acao => barra && barra.querySelector(`[data-acao="${acao}"]`);
   const busca = new URLSearchParams(location.search);
   const banco = await criarBanco(busca.has('local'));
 
@@ -42,6 +45,15 @@ export async function iniciarPagina(raiz) {
     if (esc) { try { esc.parar(); } catch { /* já parou */ } esc = null; }
     palco.replaceChildren();
     palco.className = 'esc-palco';
+  }
+
+  function atualizarBarra() {
+    if (!barra) return;
+    raiz.dataset.versao = versao;
+    /* os botões só fazem sentido no 3D: na planta a barra some */
+    barra.hidden = versao !== '3d';
+    const disco = botao('discoteca');
+    if (disco) disco.setAttribute('aria-pressed', 'false');
   }
 
   async function montar(v, motivo = null) {
@@ -76,7 +88,7 @@ export async function iniciarPagina(raiz) {
     } finally {
       palco.removeAttribute('aria-busy');
     }
-    raiz.dataset.versao = versao;
+    atualizarBarra();
     const frase = motivo === 'falhou' ? MSG_FALHA_3D : motivo === 'perdeu' ? MSG_PERDEU_3D : MOTIVOS[motivo];
     if (frase) esc.avisar(frase);
     return esc;
@@ -87,6 +99,17 @@ export async function iniciarPagina(raiz) {
     if (guardar) guardarPreferencia(v);
     fila = fila.then(() => montar(v, motivo)).catch(() => {});
     return fila;
+  }
+
+  if (barra) {
+    barra.addEventListener('click', ev => {
+      const b = ev.target.closest && ev.target.closest('[data-acao]');
+      if (!b || !esc) return;
+      const acao = b.dataset.acao;
+      if (versao !== '3d') return;
+      if (acao === 'discoteca') b.setAttribute('aria-pressed', String(Boolean(esc.piadas.discoteca())));
+      else if (acao === 'tudo') esc.andar.vista3d();
+    });
   }
 
   const inicio = versaoDoAparelho(window);
