@@ -63,7 +63,17 @@ function conferir(lugar, apelidoBruto, ocupados, meuApelido) {
 
 /* ------------------------------------------------------------------ online */
 
-export function criarBancoSupabase({ url, chave }, { cliente } = {}) {
+/* sessão anônima que o banco não aceita mais (expirou, ou foi apagada no painel) */
+const sessaoVencida = e => Boolean(e) && (e.status === 401 || e.code === 'PGRST301' || e.code === 'PGRST303' || /jwt/i.test(e.message || ''));
+
+/** Espera a promessa, mas desiste depois de ms. */
+function comLimite(promessa, ms) {
+  let relogio;
+  const limite = new Promise((_, rejeita) => { relogio = setTimeout(() => rejeita(erro('rede')), ms); });
+  return Promise.race([promessa, limite]).finally(() => clearTimeout(relogio));
+}
+
+export function criarBancoSupabase({ url, chave }, { cliente, tempoLimite = 15000 } = {}) {
   const sb = cliente || createClient(url, chave, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'rafinha-escritorio-auth' },
   });
@@ -73,6 +83,30 @@ export function criarBancoSupabase({ url, chave }, { cliente } = {}) {
   async function temSessao() {
     const { data } = await sb.auth.getSession();
     return Boolean(data && data.session);
+  }
+
+  async function entrar() {
+    const { error } = await sb.auth.signInAnonymously();
+    if (error) throw erro(error.status === 429 ? 'muitos' : 'sem_sessao');
+  }
+
+  async function gravar(lugar, apelido, visual, deNovo = false) {
+    /* o login anônimo só acontece aqui, na hora de sentar: quem só olha não cria conta */
+    if (!(await temSessao())) await entrar();
+    const { data, error } = await sb.rpc('escritorio_sentar', { p_lugar: lugar, p_apelido: apelido, p_visual: visual });
+    if (error) {
+      /* renova a sessão e tenta uma vez; um login novo faria a pessoa perder
+         o personagem que já tem (e o apelido dela ficaria "em uso") */
+      if (sessaoVencida(error)) {
+        if (deNovo || !sb.auth.refreshSession) throw erro('sem_sessao');
+        const { error: falhou } = await sb.auth.refreshSession();
+        if (falhou) throw erro('sem_sessao');
+        return gravar(lugar, apelido, visual, true);
+      }
+      throw erro(MENSAGENS[error.message] ? error.message : 'rede');
+    }
+    cacheMeu = { lugar, apelido: (data && data.apelido) || apelido, visual };
+    return cacheMeu;
   }
 
   return {
@@ -98,25 +132,22 @@ export function criarBancoSupabase({ url, chave }, { cliente } = {}) {
     async sentar(lugar, apelidoBruto, visualBruto) {
       const apelido = conferir(lugar, apelidoBruto, ultimos, cacheMeu && cacheMeu.apelido);
       const visual = sanearVisual(visualBruto);
-      /* o login anônimo só acontece aqui, na hora de sentar: quem só olha não cria conta */
-      if (!(await temSessao())) {
-        const { error } = await sb.auth.signInAnonymously();
-        if (error) throw erro(error.status === 429 ? 'muitos' : 'sem_sessao');
+      try {
+        return await comLimite(gravar(lugar, apelido, visual), tempoLimite);
+      } catch (e) {
+        /* qualquer coisa fora do previsto (rede caiu, demorou) vira frase em português */
+        throw e instanceof ErroBanco ? e : erro('rede');
       }
-      const { data, error } = await sb.rpc('escritorio_sentar', { p_lugar: lugar, p_apelido: apelido, p_visual: visual });
-      if (error) throw erro(MENSAGENS[error.message] ? error.message : 'rede');
-      cacheMeu = { lugar, apelido: data.apelido, visual };
-      return cacheMeu;
     },
 
     aoMudar(fn) {
       let espera = 0;
+      const avisa = () => { clearTimeout(espera); espera = setTimeout(fn, 250); };
       const canal = sb.channel('escritorio-personagens')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'escritorio_personagens' }, () => {
-          clearTimeout(espera);
-          espera = setTimeout(fn, 250);
-        })
-        .subscribe();
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'escritorio_personagens' }, avisa)
+        /* a cada (re)conexão lê de novo: cobre quem sentou entre a primeira
+           leitura e o canal abrir, e o que passou enquanto ele estava caído */
+        .subscribe(estado => { if (estado === 'SUBSCRIBED') avisa(); });
       return () => { clearTimeout(espera); sb.removeChannel(canal); };
     },
   };
@@ -150,6 +181,15 @@ export function criarBancoLocal(armazenamento = globalThis.localStorage) {
       ouvintes.forEach(f => f());
       return novo;
     },
-    aoMudar(fn) { ouvintes.add(fn); return () => ouvintes.delete(fn); },
+    aoMudar(fn) {
+      ouvintes.add(fn);
+      /* outra aba deste navegador sentou: imita o tempo real do Supabase */
+      const deOutraAba = e => { if (e.key === CHAVE) fn(); };
+      if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', deOutraAba);
+      return () => {
+        ouvintes.delete(fn);
+        if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('storage', deOutraAba);
+      };
+    },
   };
 }

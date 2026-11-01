@@ -4,6 +4,11 @@
 
 .esc-palco {
   --esc-linha: color-mix(in srgb, var(--borda, #c9c4b8), var(--texto, #1d1d1b) 18%);
+  /* lidas pelo andar em 3D (fundo da cena e anel de seleção); o site é escuro
+     por padrão e fica claro com data-tema="claro" no <html> */
+  --scene: #262a31;
+  --accent: var(--destaque, #24306b);
+  --esc-erro: #ff9b8f;
   position: relative;
   overflow: hidden;
   height: clamp(360px, 62vh, 680px);
@@ -94,7 +99,7 @@
   font-size: 1rem;
 }
 .esc-palco .ed-cont { position: absolute; right: 10px; top: 50%; translate: 0 -50%; font-size: 0.75rem; opacity: 0.6; pointer-events: none; }
-.esc-palco .ed-erro { margin: 0; min-height: 0; font-size: 0.85rem; color: #b3261e; }
+.esc-palco .ed-erro { margin: 0; min-height: 0; font-size: 0.85rem; color: var(--esc-erro); }
 .esc-palco .ed-erro:empty { display: none; }
 .esc-palco .ed-grupos { display: grid; gap: 12px; }
 .esc-palco .ed-grupo { display: grid; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -188,6 +193,46 @@
   border: 1px solid var(--destaque, #24306b); background: transparent;
   color: var(--destaque, #24306b); font-size: 0.85rem; font-weight: 600;
 }
+
+/* ---- carregando (antes de a versão escolhida chegar) ---- */
+.esc-palco .esc-carregando { display: grid; place-items: center; height: 100%; margin: 0; padding: 24px; text-align: center; opacity: 0.75; }
+
+/* ---- planta sem 3D (ui/planta2d.js) ---- */
+.esc-palco.p2 { --p2-piso: var(--fundo, #fff); --p2-area: color-mix(in srgb, var(--superficie, #f4f1ea), var(--texto, #1d1d1b) 6%); }
+.esc-palco .p2-rolagem { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.esc-palco .p2-svg { display: block; max-width: none; padding: 56px 12px 64px; box-sizing: content-box; }
+.esc-palco .p2-piso { fill: var(--p2-piso); stroke: var(--esc-linha); stroke-width: 0.12; }
+.esc-palco .p2-area { fill: var(--p2-area); stroke: var(--esc-linha); stroke-width: 0.06; }
+.esc-palco .p2-nome-area { font-size: 0.8px; fill: currentColor; opacity: 0.6; font-weight: 600; }
+.esc-palco .p2-bancada { fill: color-mix(in srgb, var(--superficie, #f4f1ea), var(--texto, #1d1d1b) 16%); }
+.esc-palco .p2-cad { cursor: pointer; outline: none; }
+.esc-palco .p2-toque { fill: transparent; }
+.esc-palco .p2-corpo { fill: transparent; stroke: var(--esc-linha); stroke-width: 0.08; stroke-dasharray: 0.18 0.12; }
+.esc-palco .p2-cabeca { fill: none; }
+.esc-palco .p2-mais { stroke: var(--destaque, #24306b); stroke-width: 0.1; stroke-linecap: round; opacity: 0.75; }
+.esc-palco .p2-balao { font-size: 0.8px; font-weight: 700; fill: var(--texto, #1d1d1b); paint-order: stroke; stroke: var(--p2-piso); stroke-width: 0.28px; stroke-linejoin: round; pointer-events: none; }
+.esc-palco .p2-rotulo { font-size: 0.5px; font-weight: 600; fill: currentColor; paint-order: stroke; stroke: var(--p2-piso); stroke-width: 0.16px; stroke-linejoin: round; pointer-events: none; }
+.esc-palco .p2-cad.livre:hover .p2-corpo { stroke: var(--destaque, #24306b); stroke-dasharray: none; fill: color-mix(in srgb, var(--destaque, #24306b) 18%, transparent); }
+.esc-palco .p2-cad.livre:hover .p2-mais { opacity: 1; }
+.esc-palco .p2-cad.ocupada .p2-corpo { stroke: color-mix(in srgb, var(--texto, #1d1d1b) 55%, transparent); stroke-width: 0.06; stroke-dasharray: none; }
+.esc-palco .p2-cad.ocupada .p2-mais { display: none; }
+.esc-palco .p2-cad.livre .p2-cabeca { display: none; }
+.esc-palco .p2-cad.previa .p2-corpo { stroke: var(--destaque, #24306b); stroke-width: 0.12; }
+.esc-palco .p2-cad:focus-visible .p2-toque { fill: none; stroke: var(--destaque, #24306b); stroke-width: 0.14; }
+.esc-palco .p2-anel { fill: none; stroke: var(--destaque, #24306b); stroke-width: 0.16; pointer-events: none; }
+.esc-palco .p2-so-leitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
+.esc-palco .p2-zoom { position: absolute; right: 12px; bottom: 12px; z-index: 3; display: grid; gap: 4px; }
+.esc-palco .p2-zoom button {
+  width: 38px; height: 38px; padding: 0;
+  border-radius: 8px; border: 1px solid var(--esc-linha);
+  background: var(--superficie, #f4f1ea); font-size: 1.25rem; line-height: 1; cursor: pointer;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.14);
+}
+.esc-palco .p2-zoom button:disabled { opacity: 0.45; cursor: default; }
+.esc-palco .p2-zoom button:focus-visible { outline: 2px solid var(--destaque, #24306b); outline-offset: 2px; }
+
+/* tema claro do site */
+:root[data-tema='claro'] .esc-palco { --scene: #e3e6eb; --esc-erro: #b3261e; }
 
 /* no celular o editor sobe e ocupa a metade de baixo */
 @media (max-width: 720px) {

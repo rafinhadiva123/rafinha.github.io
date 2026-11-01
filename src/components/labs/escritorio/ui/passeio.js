@@ -271,14 +271,15 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   /* ---- teclado ---- */
   const MAPA = { ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', w: 'w', a: 'a', s: 's', d: 'd', W: 'w', A: 'a', S: 's', D: 'd', Shift: 'Shift' };
   const digitando = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+  const fim = new AbortController();   /* parar() solta os ouvintes da janela */
   window.addEventListener('keydown', e => {
     if (!ativo || digitando(e.target)) return;
     if (e.key === 'Escape') { e.preventDefault(); sairDoPasseio(); return; }
     const k = MAPA[e.key];
     if (k) { teclas.add(k); if (k !== 'Shift') e.preventDefault(); }
-  });
-  window.addEventListener('keyup', e => { const k = MAPA[e.key]; if (k) teclas.delete(k); });
-  window.addEventListener('blur', () => teclas.clear());
+  }, { signal: fim.signal });
+  window.addEventListener('keyup', e => { const k = MAPA[e.key]; if (k) teclas.delete(k); }, { signal: fim.signal });
+  window.addEventListener('blur', () => teclas.clear(), { signal: fim.signal });
 
   /* ---- joystick (celular) ---- */
   let dedo = null;
@@ -309,6 +310,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     get ativo() { return ativo; },
     get posicao() { return { x, z, giro }; },
     entrar, sair: sairDoPasseio,
+    parar() { sairDoPasseio({ voar: false }); fim.abort(); },
     /** Para testes e para a "piada" de mandar o boneco a um ponto. */
     irAte(p) { const q = maisPerto(g, p.x, p.z, 1); const r = q && caminho(g, { x, z }, q); if (r) { rota = r; mostrarMarca(q); } return Boolean(r); },
     podeFicar: (px, pz) => podeFicar(g, px, pz),
