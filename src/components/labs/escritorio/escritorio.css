@@ -45,6 +45,10 @@
 .esc-palco .mais:hover { background: var(--destaque, #24306b); color: var(--fundo, #fff); transform: translate(-50%, -50%) scale(1.12); }
 .esc-palco .mais:focus-visible { outline: 2px solid var(--destaque, #24306b); outline-offset: 3px; }
 
+/* lápis em cima da própria cadeira: abre "Editar seu personagem" */
+.esc-palco .mais-lapis { background: var(--destaque, #24306b); color: var(--fundo, #fff); }
+.esc-palco .mais-lapis svg { width: 15px; height: 15px; stroke-width: 2; stroke-linejoin: round; }
+
 /* ---- busca por apelido ----
    fechada é só a lupa, meio transparente, no canto de cima à esquerda */
 .esc-palco .bu-raiz { position: absolute; left: 12px; top: 12px; z-index: 3; width: min(280px, calc(100% - 24px)); pointer-events: none; }
@@ -251,6 +255,17 @@
   color: var(--destaque, #24306b); font-size: 0.85rem; font-weight: 600;
 }
 
+/* "Escolha uma cadeira livre…" enquanto a pessoa muda de cadeira */
+.esc-palco .esc-mudanca {
+  position: absolute; left: 50%; bottom: 56px; z-index: 4;
+  translate: -50% 0; max-width: calc(100% - 24px);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--superficie, #f4f1ea); border: 1px solid var(--esc-linha);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+}
+.esc-palco .esc-mudanca-texto { margin: 0; font-size: 0.9rem; text-align: center; }
+
 /* ---- carregando (antes de a versão escolhida chegar) ---- */
 .esc-palco .esc-carregando { display: grid; place-items: center; height: 100%; margin: 0; padding: 24px; text-align: center; opacity: 0.75; }
 
@@ -275,6 +290,10 @@
 .esc-palco .p2-cad.ocupada .p2-mais { display: none; }
 .esc-palco .p2-cad.livre .p2-cabeca { display: none; }
 .esc-palco .p2-cad.previa .p2-corpo { stroke: var(--destaque, #24306b); stroke-width: 0.12; }
+/* quem já sentou: sem "+" nas cadeiras livres, e a própria cadeira em destaque */
+.esc-palco.p2-sem-mais .p2-cad.livre .p2-mais { display: none; }
+.esc-palco.p2-sem-mais .p2-cad.livre { cursor: default; }
+.esc-palco .p2-cad.minha .p2-toque { fill: transparent; stroke: var(--destaque, #24306b); stroke-width: 0.1; stroke-dasharray: 0.18 0.12; }
 .esc-palco .p2-cad:focus-visible .p2-toque { fill: none; stroke: var(--destaque, #24306b); stroke-width: 0.14; }
 .esc-palco .p2-anel { fill: none; stroke: var(--destaque, #24306b); stroke-width: 0.16; pointer-events: none; }
 .esc-palco .p2-so-leitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }

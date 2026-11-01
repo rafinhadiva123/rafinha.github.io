@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 import { criarEscritorio, montarOcupantes, MSG_CARGA, MSG_CONFLITO, msgExcluido } from './escritorio.js'
+import { MSG_SO_NA_SUA, msgEditado } from './nucleo.js'
 import { ErroBanco, MENSAGENS } from '../dados/banco.js'
 import { FIXOS, chaveApelido, APELIDOS_RESERVADOS } from '../planta/fixos.js'
 import { LUGARES } from '../planta/lugares.js'
@@ -72,9 +73,11 @@ function telaFalsa() {
       tela.tentar = tentarDeNovo
       return { camada: {}, busca: {}, editor: {}, aviso: tela.aviso, carga: tela.carga, cargaTexto: tela.cargaTexto }
     },
-    criarMais: (_c: unknown, _a: unknown, { ocupados, escolher }: { ocupados: () => Set<string>; escolher: (id: string) => void }) => {
+    criarMais: (_c: unknown, _a: unknown, { ocupados, escolher, mostrarMais, meuLugar }: any) => {
       tela.ocupados = ocupados
       tela.escolher = escolher
+      tela.mostrarMais = mostrarMais
+      tela.meuLugar = meuLugar
       tela.mais = { ligar: vi.fn(), atualizar: vi.fn(), parar: vi.fn() }
       return tela.mais
     },
@@ -122,6 +125,14 @@ describe('quem ocupa cada cadeira', () => {
     const m2 = montarOcupantes({ previa: { lugar: 'leste-1-N-1', apelido: 'Ana', visual } })
     expect(m2.get('leste-1-N-1').apelido).toBe('Gabi')
   })
+
+  test('editando na própria cadeira, a prévia aparece no lugar do personagem salvo', () => {
+    const a = lugarLivre(0)
+    const visitantes = [{ lugar: a, apelido: 'Ana', visual }]
+    const previa = { lugar: a, apelido: 'Ana Luiza', visual }
+    expect(montarOcupantes({ visitantes, previa, meuLugar: a }).get(a).apelido).toBe('Ana Luiza')
+    expect(montarOcupantes({ visitantes, previa }).get(a).apelido).toBe('Ana')
+  })
 })
 
 describe('controlador com banco falso', () => {
@@ -152,6 +163,97 @@ describe('controlador com banco falso', () => {
     expect(tela.mais.ligar).toHaveBeenLastCalledWith(true)
   })
 
+  test('quem já sentou não vê os "+" e o editor não abre em outra cadeira', async () => {
+    const banco = bancoFalso()
+    const { ctrl, tela } = await montar(banco)
+    const a = lugarLivre(0), b = lugarLivre(1)
+    expect(tela.mostrarMais()).toBe(true)
+    tela.escolher(a)
+    await tela.editores.at(-1).salvar('Ana', visual)
+    expect(tela.mostrarMais()).toBe(false)
+    expect(tela.meuLugar()).toBe(a)
+
+    const antes = tela.editores.length
+    tela.escolher(b)
+    expect(tela.editores.length).toBe(antes)
+    expect(ctrl.aberto).toBe(false)
+    expect(tela.aviso.textContent).toBe(MSG_SO_NA_SUA)
+    tela.escolher(FIXOS[0].lugar)
+    expect(tela.editores.length).toBe(antes)
+    expect(tela.aviso.textContent).toBe(MSG_CONFLITO)
+  })
+
+  test('na própria cadeira o editor abre para editar: prévia ao vivo e salva sem sair do lugar', async () => {
+    const banco = bancoFalso()
+    const { ctrl, tela } = await montar(banco)
+    const a = lugarLivre(0)
+    tela.escolher(a)
+    await tela.editores.at(-1).salvar('Ana', visual)
+
+    tela.escolher(a)
+    const ed = tela.editores.at(-1)
+    expect(ctrl.aberto).toBe(true)
+    expect(ed.opc.meu.lugar).toBe(a)
+    expect(typeof ed.opc.mudarCadeira).toBe('function')
+    const novo = { ...visual, oculos: 'redondo' }
+    ed.mudou('Ana Luiza', novo)
+    expect(tela.mapas.at(-1).get(a)).toMatchObject({ apelido: 'Ana Luiza', previa: true })
+
+    await ed.salvar('Ana Luiza', novo)
+    expect(await banco.listar()).toEqual([{ lugar: a, apelido: 'Ana Luiza', visual: novo }])
+    expect(ctrl.meu).toMatchObject({ lugar: a, apelido: 'Ana Luiza' })
+    expect(tela.mapas.at(-1).get(a).apelido).toBe('Ana Luiza')
+    expect(tela.aviso.textContent).toBe(msgEditado('Ana Luiza'))
+  })
+
+  test('"Mudar de cadeira" no editor: os "+" voltam e a cadeira nova abre com o que já tinha sido mexido', async () => {
+    const banco = bancoFalso()
+    const { ctrl, tela } = await montar(banco)
+    const a = lugarLivre(0), b = lugarLivre(1)
+    tela.escolher(a)
+    await tela.editores.at(-1).salvar('Ana', visual)
+
+    tela.escolher(a)
+    const novo = { ...visual, oculos: 'redondo' }
+    tela.editores.at(-1).opc.mudarCadeira('Ana Luiza', novo)
+    expect(ctrl.aberto).toBe(false)
+    expect(ctrl.mudando).toBe(true)
+    expect(tela.mostrarMais()).toBe(true)
+
+    tela.escolher(b)
+    const ed = tela.editores.at(-1)
+    expect(ed.opc.mudando).toBe(true)
+    expect(ed.opc.rascunho).toEqual({ apelido: 'Ana Luiza', visual: novo })
+    expect(ed.opc.excluir).toBeNull()
+    expect(ed.opc.mudarCadeira).toBeNull()
+    await ed.salvar('Ana Luiza', novo)
+
+    expect(await banco.listar()).toEqual([{ lugar: b, apelido: 'Ana Luiza', visual: novo }])
+    expect(ctrl.mudando).toBe(false)
+    expect(tela.mostrarMais()).toBe(false)
+  })
+
+  test('desistir de mudar de cadeira: cancelar ou fechar o editor da cadeira nova deixa tudo como estava', async () => {
+    const banco = bancoFalso()
+    const { ctrl, tela } = await montar(banco)
+    const a = lugarLivre(0), b = lugarLivre(1)
+    tela.escolher(a)
+    await tela.editores.at(-1).salvar('Ana', visual)
+
+    tela.escolher(a)
+    tela.editores.at(-1).opc.mudarCadeira('Ana', visual)
+    ctrl.cancelarMudanca()
+    expect(ctrl.mudando).toBe(false)
+    expect(tela.mostrarMais()).toBe(false)
+
+    tela.escolher(a)
+    tela.editores.at(-1).opc.mudarCadeira('Ana', visual)
+    tela.escolher(b)
+    tela.editores.at(-1).fechar()
+    expect(ctrl.mudando).toBe(false)
+    expect((await banco.listar()).map(p => p.lugar)).toEqual([a])
+  })
+
   test('mudar de cadeira com o mesmo personagem libera a antiga', async () => {
     const banco = bancoFalso()
     const { tela } = await montar(banco)
@@ -159,6 +261,8 @@ describe('controlador com banco falso', () => {
     tela.escolher(a)
     await tela.editores.at(-1).salvar('Ana', visual)
 
+    tela.escolher(a)
+    tela.editores.at(-1).opc.mudarCadeira('Ana', visual)
     tela.escolher(b)
     const ed = tela.editores.at(-1)
     expect(ed.opc.meu.lugar).toBe(a)
@@ -178,7 +282,7 @@ describe('controlador com banco falso', () => {
     expect(tela.editores.at(-1).opc.excluir).toBeNull()
     await tela.editores.at(-1).salvar('Ana', visual)
 
-    tela.escolher(b)
+    tela.escolher(a)
     const ed = tela.editores.at(-1)
     expect(typeof ed.opc.excluir).toBe('function')
     await ed.opc.excluir()
@@ -201,7 +305,7 @@ describe('controlador com banco falso', () => {
     const { ctrl, tela } = await montar(banco)
     tela.escolher(lugarLivre(0))
     await tela.editores.at(-1).salvar('Ana', visual)
-    tela.escolher(lugarLivre(1))
+    tela.escolher(lugarLivre(0))
     banco.quebrar(true)
     await expect(tela.editores.at(-1).opc.excluir()).rejects.toThrow()
     banco.quebrar(false)

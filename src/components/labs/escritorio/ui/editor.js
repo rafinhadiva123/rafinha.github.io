@@ -1,6 +1,15 @@
 // Painel "Monte seu personagem": apelido e visual. A cada escolha avisa a
 // cena (que redesenha o boneco na cadeira, ao vivo); ao confirmar, chama
 // `salvar` e mostra o erro em português se o banco recusar.
+// Quando abre (modoEditor):
+//   novo   → ainda não tem personagem e clicou numa cadeira livre: monta e senta;
+//   editar → já tem personagem e clicou na própria cadeira: muda apelido e
+//            visual sem sair do lugar (e daqui dá para mudar de cadeira ou
+//            excluir o personagem);
+//   mudar  → apertou "Mudar de cadeira" no editor e escolheu uma cadeira
+//            livre: leva o personagem para lá, a antiga fica livre;
+//   null   → qualquer outro clique: o editor não abre.
+// O banco é quem garante que só o dono mexe no próprio personagem.
 // DOM puro; o apelido só entra em textContent/value, nunca como HTML.
 import { OPCOES, APELIDO_MAX, sortearVisual, sanearApelido, sanearVisual } from '../visual.js';
 import { nomeDaArea } from '../planta/lugares.js';
@@ -39,36 +48,74 @@ function el(tag, attrs = {}, filhos = []) {
 }
 
 /**
+ * Em que modo o editor abre ao clicar em `lugar`, ou null se não deve abrir.
+ * Pura.
+ * @param ocupada  a cadeira tem outra pessoa sentada (ou é de um fixo)
+ * @param mudando  a pessoa apertou "Mudar de cadeira" e está escolhendo
+ */
+export function modoEditor(lugar, meu, { ocupada = false, mudando = false } = {}) {
+  if (meu && meu.lugar === lugar) return 'editar';
+  if (ocupada) return null;
+  if (meu) return mudando ? 'mudar' : null;
+  return 'novo';
+}
+
+/* sem zona nem número de bancada na tela; só o nome da área, quando tem */
+const TEXTOS = {
+  novo: {
+    titulo: 'Monte seu personagem', botao: 'Sentar aqui', enviando: 'Sentando…',
+    sub: area => `${area ? `${area}. ` : ''}Fica salvo para todo mundo que abrir o escritório.`,
+  },
+  editar: {
+    titulo: 'Editar seu personagem', botao: 'Salvar mudanças', enviando: 'Salvando…',
+    sub: () => 'Mude o apelido ou o visual quando quiser. Você continua nesta cadeira.',
+  },
+  mudar: {
+    titulo: 'Mudar de cadeira', botao: 'Mudar para cá', enviando: 'Mudando…',
+    sub: area => `${area ? `Você vai para a ${area}. ` : ''}A cadeira de antes fica livre.`,
+  },
+};
+
+/**
+ * Abre o painel e devolve {modo, fechar, aberto}, ou null quando o clique não
+ * deve abrir o editor (veja modoEditor).
  * @param raiz      elemento onde o painel aparece
- * @param opcoes.lugar   id da cadeira
- * @param opcoes.meu     {lugar, apelido, visual} se a pessoa já tem personagem
+ * @param opcoes.lugar    id da cadeira
+ * @param opcoes.meu      {lugar, apelido, visual} se a pessoa já tem personagem
+ * @param opcoes.ocupada  cadeira com outra pessoa sentada
+ * @param opcoes.mudando  está escolhendo a cadeira nova depois de "Mudar de cadeira"
+ * @param opcoes.rascunho {apelido, visual} mexidos antes de "Mudar de cadeira"
  * @param opcoes.mudou(apelido, visual)   prévia ao vivo
  * @param opcoes.salvar(apelido, visual)  Promise; lança erro com .message
  * @param opcoes.fechar()                 cancelou
- * @param opcoes.excluir()                Promise; exclui o personagem (só quando já tem)
+ * @param opcoes.excluir()                Promise; exclui o personagem (só no modo editar)
+ * @param opcoes.mudarCadeira(apelido, visual)  apertou "Mudar de cadeira" (só
+ *        no modo editar): o painel fecha sem chamar `fechar` e quem chamou
+ *        pede a cadeira nova. Sem essa função o botão não aparece.
  */
-export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, excluir = null, aleatorio = Math.random }) {
-  let visual = meu ? sanearVisual(meu.visual) : sortearVisual(aleatorio);
+export function abrirEditor(raiz, {
+  lugar, meu, ocupada = false, mudando = false, rascunho = null,
+  mudou, salvar, fechar, excluir = null, mudarCadeira = null, aleatorio = Math.random,
+}) {
+  const modo = modoEditor(lugar, meu, { ocupada, mudando });
+  if (!modo) return null;
+  const txt = TEXTOS[modo];
+  const base = rascunho || meu;
+  let visual = base ? sanearVisual(base.visual) : sortearVisual(aleatorio);
   let enviando = false, fechado = false;
   raiz.replaceChildren();
   raiz.hidden = false;
+  raiz.dataset.modo = modo;
 
-  const titulo = el('h2', { classe: 'ed-titulo', id: 'ed-titulo', texto: meu ? 'Mudar de cadeira' : 'Monte seu personagem' });
-  /* sem zona nem número de bancada na tela; só o nome da área, quando tem */
-  const area = nomeDaArea(lugar);
-  const sub = el('p', {
-    classe: 'ed-sub',
-    texto: meu
-      ? `${area ? `Você vai para a ${area}. ` : ''}A cadeira de antes fica livre.`
-      : `${area ? `${area}. ` : ''}Fica salvo para todo mundo que abrir o escritório.`,
-  });
+  const titulo = el('h2', { classe: 'ed-titulo', id: 'ed-titulo', texto: txt.titulo });
+  const sub = el('p', { classe: 'ed-sub', texto: txt.sub(nomeDaArea(lugar)) });
   const btnFechar = el('button', { type: 'button', classe: 'ed-fechar', 'aria-label': 'Cancelar e fechar', texto: '×', onclick: () => sair() });
 
   const campo = el('input', {
     type: 'text', id: 'ed-apelido', classe: 'ed-input', autocomplete: 'off', spellcheck: 'false',
     enterkeyhint: 'done', 'aria-describedby': 'ed-erro',
   });
-  if (meu) campo.value = meu.apelido;
+  if (base) campo.value = sanearApelido(base.apelido);
   const contador = el('span', { classe: 'ed-cont', 'aria-hidden': 'true' });
   const erro = el('p', { classe: 'ed-erro', id: 'ed-erro', role: 'alert' });
   const atualizarContador = () => { contador.textContent = `${[...sanearApelido(campo.value)].length}/${APELIDO_MAX}`; };
@@ -82,7 +129,19 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, excluir =
 
   const grupos = el('div', { classe: 'ed-grupos' });
   const sortear = el('button', { type: 'button', classe: 'ed-sec', texto: 'Sortear visual', onclick: () => { visual = sortearVisual(aleatorio); desenhar(); avisar(); } });
-  const confirmar = el('button', { type: 'submit', classe: 'ed-pri', texto: meu ? 'Mudar para cá' : 'Sentar aqui' });
+  const confirmar = el('button', { type: 'submit', classe: 'ed-pri', texto: txt.botao });
+  const mudar = modo === 'editar' && typeof mudarCadeira === 'function'
+    ? el('button', {
+      type: 'button', classe: 'ed-sec ed-mudar', texto: 'Mudar de cadeira',
+      onclick: () => {
+        if (enviando) return;
+        const apelido = sanearApelido(campo.value), v = visual;
+        fecharPainel();
+        mudarCadeira(apelido, v);
+      },
+    })
+    : null;
+  const travar = sim => { for (const b of [confirmar, sortear, mudar]) if (b) b.disabled = sim; };
 
   const form = el('form', { classe: 'ed-form', novalidate: true, 'aria-labelledby': 'ed-titulo' }, [
     el('div', { classe: 'ed-topo' }, [el('div', {}, [titulo, sub]), btnFechar]),
@@ -92,8 +151,8 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, excluir =
       erro,
     ]),
     grupos,
-    el('div', { classe: 'ed-acoes' }, [sortear, confirmar]),
-    meu && excluir ? blocoExcluir() : null,
+    el('div', { classe: 'ed-acoes' }, [mudar, sortear, confirmar]),
+    modo === 'editar' && excluir ? blocoExcluir() : null,
   ]);
   form.addEventListener('submit', async ev => {
     ev.preventDefault();
@@ -101,15 +160,15 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, excluir =
     const apelido = sanearApelido(campo.value);
     if (!apelido) { erro.textContent = 'Escolha um apelido para o seu personagem.'; campo.focus(); return; }
     enviando = true;
-    confirmar.disabled = sortear.disabled = true;
-    confirmar.textContent = 'Sentando…';
+    travar(true);
+    confirmar.textContent = txt.enviando;
     try {
       await salvar(apelido, visual);
       fecharPainel();
     } catch (e) {
       enviando = false;
-      confirmar.disabled = sortear.disabled = false;
-      confirmar.textContent = meu ? 'Mudar para cá' : 'Sentar aqui';
+      travar(false);
+      confirmar.textContent = txt.botao;
       erro.textContent = (e && e.message) || 'Não deu para salvar agora. Tente de novo.';
       if (e && e.codigo === 'apelido_em_uso') campo.focus();
     }
@@ -133,14 +192,16 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, excluir =
       if (enviando) return;
       enviando = true;
       erroExcluir.textContent = '';
-      sim.disabled = nao.disabled = confirmar.disabled = sortear.disabled = true;
+      sim.disabled = nao.disabled = true;
+      travar(true);
       sim.textContent = 'Excluindo…';
       try {
         await excluir();
         fecharPainel();
       } catch (e) {
         enviando = false;
-        sim.disabled = nao.disabled = confirmar.disabled = sortear.disabled = false;
+        sim.disabled = nao.disabled = false;
+        travar(false);
         sim.textContent = 'Sim, excluir meu personagem';
         erroExcluir.textContent = (e && e.message) || 'Não deu para excluir agora. Tente de novo.';
       }
@@ -196,5 +257,5 @@ export function abrirEditor(raiz, { lugar, meu, mudou, salvar, fechar, excluir =
   /* no celular, focar o campo abre o teclado em cima do boneco: só foca com mouse */
   if (window.matchMedia && window.matchMedia('(pointer: fine)').matches) campo.focus({ preventScroll: true });
 
-  return { fechar: sair, get aberto() { return !fechado; } };
+  return { modo, fechar: sair, get aberto() { return !fechado; } };
 }

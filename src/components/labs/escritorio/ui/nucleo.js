@@ -7,7 +7,11 @@
 //
 // Regras:
 // - Quem ocupa uma cadeira = FIXOS + visitantes do banco + prévia do editor
-//   (a prévia só aparece em cadeira livre).
+//   (a prévia só aparece em cadeira livre ou na própria cadeira).
+// - O editor só abre na própria cadeira (para editar) ou, para quem ainda não
+//   sentou, numa cadeira livre. Quem já sentou não vê os "+": para trocar de
+//   lugar, abre o próprio personagem e aperta "Mudar de cadeira"; aí os "+"
+//   voltam até escolher a cadeira nova (ou cancelar).
 // - "+" e busca saem do modo boneco antes de agir.
 // - A atualização ao vivo (banco.aoMudar) recarrega a lista sem mexer no editor
 //   e avisa quem acabou de chegar.
@@ -18,24 +22,30 @@ import '../escritorio.css';
 import { FIXOS } from '../planta/fixos.js';
 import { LUGAR, LUGARES } from '../planta/lugares.js';
 import { paraBoneco } from '../visual.js';
+import { modoEditor } from './editor.js';
 
 export const MSG_CARGA = 'Não deu para carregar quem está no escritório agora. Os 15 de sempre continuam nas cadeiras.';
 export const MSG_CONFLITO = 'Alguém sentou nessa cadeira enquanto você escolhia. Escolha outra.';
 export const MSG_LOTADO = 'O escritório está lotado: não sobrou cadeira livre.';
 export const msgExcluido = apelido => `Pronto, ${apelido} foi excluído. A cadeira e o apelido ficaram livres.`;
+export const msgEditado = apelido => `Pronto, ${apelido} foi atualizado para todo mundo.`;
+export const MSG_SO_NA_SUA = 'Você já tem um personagem. Para trocar de lugar, abra o seu e aperte “Mudar de cadeira”.';
+export const MSG_ESCOLHA = 'Escolha uma cadeira livre para onde levar o seu personagem.';
 const MSG_SEM_BANCO = 'Sem conexão com o escritório agora. Tente de novo em instantes.';
 
 /**
  * Quem ocupa cada cadeira agora: fixos, visitantes e a prévia do editor.
- * Pura. Quem já está numa cadeira não é trocado pela prévia.
+ * Pura. Quem já está numa cadeira não é trocado pela prévia, a não ser a
+ * própria pessoa editando na cadeira dela (`meuLugar`).
  */
-export function montarOcupantes({ visitantes = [], previa = null } = {}) {
+export function montarOcupantes({ visitantes = [], previa = null, meuLugar = null } = {}) {
   const mapa = new Map();
   for (const f of FIXOS) mapa.set(f.lugar, f);
   for (const v of visitantes) {
     if (!mapa.has(v.lugar)) mapa.set(v.lugar, { ...paraBoneco(v.apelido, v.visual), apelido: v.apelido });
   }
-  if (previa && !mapa.has(previa.lugar)) {
+  const fixo = previa && FIXOS.some(f => f.lugar === previa.lugar);
+  if (previa && !fixo && (!mapa.has(previa.lugar) || previa.lugar === meuLugar)) {
     mapa.set(previa.lugar, { ...paraBoneco(previa.apelido, previa.visual), apelido: previa.apelido, previa: true });
   }
   return mapa;
@@ -70,6 +80,14 @@ export function montarCamadas(palco, { tentarDeNovo = () => {} } = {}) {
   editor.hidden = true;
   const aviso = el('p', 'esc-aviso', { role: 'status', 'aria-live': 'polite' });
   aviso.hidden = true;
+  /* "Escolha uma cadeira livre…" enquanto a pessoa muda de cadeira */
+  const mudanca = el('div', 'esc-mudanca', { role: 'status' });
+  mudanca.hidden = true;
+  const mudancaTexto = el('p', 'esc-mudanca-texto');
+  mudancaTexto.textContent = MSG_ESCOLHA;
+  const mudancaCancelar = el('button', 'esc-tentar', { type: 'button' });
+  mudancaCancelar.textContent = 'Cancelar';
+  mudanca.append(mudancaTexto, mudancaCancelar);
   const carga = el('div', 'esc-carga', { role: 'alert' });
   carga.hidden = true;
   const cargaTexto = el('p', 'esc-carga-texto');
@@ -77,8 +95,8 @@ export function montarCamadas(palco, { tentarDeNovo = () => {} } = {}) {
   cargaBotao.textContent = 'Tentar de novo';
   cargaBotao.addEventListener('click', () => tentarDeNovo());
   carga.append(cargaTexto, cargaBotao);
-  palco.append(camada, busca, editor, aviso, carga);
-  return { camada, busca, editor, aviso, carga, cargaTexto };
+  palco.append(camada, busca, editor, mudanca, aviso, carga);
+  return { camada, busca, editor, aviso, carga, cargaTexto, mudanca, mudancaCancelar };
 }
 
 const TEMPO_LIMITE = 10000;   /* ms: leitura que demora mais que isso conta como falha */
@@ -99,7 +117,8 @@ export function comLimite(promessa, ms) {
  *                   criarPasseio, abrirEditor, montarCamadas, criarPiadas
  * @param opcoes.tempoLimite  ms até a leitura do banco contar como falha
  * @param opcoes.aleatorio    0..1, para escolher a cadeira em sentarEmLivre
- * @returns {pronto, andar, piadas, recarregar(), abrir(lugar), sentarEmLivre(), parar(), aberto, modo, meu}
+ * @returns {pronto, andar, piadas, recarregar(), abrir(lugar), sentarEmLivre(),
+ *           cancelarMudanca(), parar(), aberto, mudando, modo, meu}
  */
 export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, aleatorio = Math.random } = {}) {
   ui = { montarCamadas, ...ui };
@@ -107,6 +126,7 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
   let visitantes = [];        /* lista do banco, sem os fixos */
   let meu = null;             /* {lugar, apelido, visual} de quem já sentou */
   let previa = null;          /* {lugar, apelido, visual} do editor aberto agora */
+  let mudando = null;         /* {apelido, visual} enquanto escolhe a cadeira nova */
   let ocupadas = new Set(FIXOS.map(f => f.lugar));
   let editor = null;          /* retorno de abrirEditor, se houver painel aberto */
   let vezEditor = 0;          /* identifica o painel atual: um salvar antigo não mexe no novo */
@@ -133,7 +153,7 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
   ];
 
   function redesenhar() {
-    const mapa = montarOcupantes({ visitantes, previa });
+    const mapa = montarOcupantes({ visitantes, previa, meuLugar: meu && meu.lugar });
     ocupadas = new Set(mapa.keys());
     andar.definirOcupantes(mapa);
     mais.atualizar();
@@ -143,7 +163,11 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
     ocupados: () => ocupadas,
     escolher: lugar => abrirPainel(lugar),
     avisar,
+    /* quem já sentou só vê os "+" enquanto escolhe para onde mudar */
+    mostrarMais: () => !meu || Boolean(mudando),
+    meuLugar: () => (meu ? meu.lugar : null),
   });
+  if (c.mudancaCancelar) c.mudancaCancelar.addEventListener('click', () => cancelarMudanca());
   /* no modo boneco o clique é para andar, menos no armário: a fuga continua valendo */
   let piadas = null;
   const passeio = ui.criarPasseio(palco, andar, {
@@ -171,26 +195,71 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
   function abrirPainel(lugar) {
     if (parado || !LUGAR.has(lugar)) return;
     fecharPainelAtual();
-    if (ocupadas.has(lugar)) { avisar(MSG_CONFLITO); return; }
+    /* sem a prévia: ela acabou de sair com o painel anterior */
+    const ocupada = montarOcupantes({ visitantes }).has(lugar);
+    const modo = modoEditor(lugar, meu, { ocupada, mudando: Boolean(mudando) });
+    if (!modo) { avisar(ocupada ? MSG_CONFLITO : MSG_SO_NA_SUA); return; }
     sairDoModoBoneco();
+    const rascunho = modo === 'mudar' ? mudando : null;
+    if (modo !== 'mudar') pararMudanca();
     const vez = ++vezEditor;
     previa = null;
     andar.selecionar(lugar);
     andar.focar(lugar);
     andar.olharPara(lugar, lado());
     mais.ligar(false);
+    if (c.mudanca) c.mudanca.hidden = true;
     editor = ui.abrirEditor(c.editor, {
       lugar,
       meu,
+      ocupada,
+      mudando: modo === 'mudar',
+      rascunho,
       mudou: (apelido, visual) => {
         if (vez !== vezEditor) return;
         previa = { lugar, apelido, visual };
         redesenhar();
       },
       salvar: (apelido, visual) => salvar(vez, lugar, apelido, visual),
-      excluir: meu && banco && banco.sair ? () => excluir(vez) : null,
+      excluir: modo === 'editar' && banco && banco.sair ? () => excluir(vez) : null,
+      mudarCadeira: modo === 'editar' ? (apelido, visual) => comecarMudanca(vez, apelido, visual) : null,
       fechar: () => { if (vez === vezEditor) encerrarPainel(); },
     });
+    if (!editor) { encerrarPainel(); return; }
+    redesenhar();
+  }
+
+  /* "Mudar de cadeira" no editor: o painel já fechou; os "+" voltam e a
+     próxima cadeira livre escolhida abre o editor no modo "mudar" */
+  function comecarMudanca(vez, apelido, visual) {
+    if (vez !== vezEditor || !meu) return;
+    editor = null;
+    previa = null;
+    vezEditor++;
+    mudando = { apelido: apelido || meu.apelido, visual: visual || meu.visual };
+    andar.selecionar(null);
+    /* sai da vista de retrato (onde os "+" somem) para uma vista das bancadas em volta */
+    const l = LUGAR.get(meu.lugar);
+    if (l && typeof andar.irPara === 'function') andar.irPara(l.x, l.z);
+    mais.ligar(true);
+    if (c.mudanca) c.mudanca.hidden = false;
+    else avisar(MSG_ESCOLHA);
+    if (doc && doc.addEventListener) doc.addEventListener('keydown', escParaCancelar);
+    redesenhar();
+  }
+
+  function escParaCancelar(e) { if (e.key === 'Escape' && mudando && !editor) cancelarMudanca(); }
+
+  function pararMudanca() {
+    mudando = null;
+    if (c.mudanca) c.mudanca.hidden = true;
+    if (doc && doc.removeEventListener) doc.removeEventListener('keydown', escParaCancelar);
+  }
+
+  /** Desiste de mudar de cadeira: tudo fica como estava. */
+  function cancelarMudanca() {
+    if (!mudando) return;
+    pararMudanca();
     redesenhar();
   }
 
@@ -209,15 +278,18 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
     editor = null;
     previa = null;
     vezEditor++;
+    pararMudanca();
     andar.selecionar(null);
     mais.ligar(true);
     redesenhar();
   }
 
-  /** Abre o editor numa cadeira livre qualquer (caminho para teclado e leitor de tela). */
+  /** Abre o editor numa cadeira livre qualquer (caminho para teclado e leitor
+      de tela). Quem já sentou abre o próprio personagem, na cadeira dele. */
   function sentarEmLivre() {
     if (parado) return null;
     fecharPainelAtual();
+    if (meu && !mudando) { abrirPainel(meu.lugar); return meu.lugar; }
     const livres = LUGARES.filter(l => !ocupadas.has(l.id));
     if (!livres.length) { avisar(MSG_LOTADO); return null; }
     const lugar = livres[Math.floor(aleatorio() * livres.length) % livres.length].id;
@@ -236,7 +308,9 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
       .concat(novo);
     if (vez === vezEditor) encerrarPainel();
     await recarregar();
-    avisar(`Pronto, ${novo.apelido} está sentado. Quem abrir o escritório vai ver você aqui.`);
+    avisar(anterior && anterior.lugar === novo.lugar
+      ? msgEditado(novo.apelido)
+      : `Pronto, ${novo.apelido} está sentado. Quem abrir o escritório vai ver você aqui.`);
   }
 
   /* "Excluir meu personagem": some da cadeira na hora e o apelido fica livre */
@@ -313,13 +387,16 @@ export function criarNucleo(palco, banco, { ui, tempoLimite = TEMPO_LIMITE, alea
     abrir: abrirPainel,
     sentarEmLivre,
     avisar,
+    cancelarMudanca,
     get aberto() { return Boolean(editor); },
+    get mudando() { return Boolean(mudando); },
     get modo() { return banco ? banco.modo : 'sem'; },
     get meu() { return meu; },
     get pessoas() { return pessoas(); },
     parar() {
       if (parado) return;
       fecharPainelAtual();
+      pararMudanca();
       parado = true;
       clearTimeout(timerAviso);
       if (doc && doc.removeEventListener) doc.removeEventListener('visibilitychange', aoVisibilidade);
