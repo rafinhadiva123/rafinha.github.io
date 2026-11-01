@@ -218,5 +218,11 @@ export function criarMultidao(cena) {
     get total() { return ocupantes.length; },
     get detalhados() { return detalhados.size; },
     rigDe(id) { const c = cache.get(id); return c && detalhados.has(id) ? c.rig : null; },
+    /** Rigs dos visitantes desenhados completos agora (a discoteca faz eles dançarem). */
+    rigsDetalhados() {
+      const out = [];
+      for (const id of detalhados) { const c = cache.get(id); if (c && c.rig) out.push(c.rig); }
+      return out;
+    },
   };
 }

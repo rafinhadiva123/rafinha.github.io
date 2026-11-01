@@ -77,6 +77,7 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
   const passeios = [];
   let fuga = null, filmagemAtiva = null;
   const disco = { alvo: 0, mix: 0, t0: 0, ult: 0, piso: null, pisoMat: null, pontos: null, dirs: [], globo: null, cores: [] };
+  const visitantesDancando = new Map();   /* rig do visitante -> altura do corpo parado */
 
   /* ------------------------------------------------------ lugares e rotas */
 
@@ -490,6 +491,7 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
       disco.pontos.visible = false;
       disco.piso.visible = false;
       pessoas.forEach(p => { if (p.dancando) { p.dancando = false; if (!p.est.busy) resetarPose(p); } });
+      pararVisitantes();
       return false;
     }
     const batida = (t - disco.t0) * BPM / 60;
@@ -532,7 +534,30 @@ export function criarMotor({ andar, pessoas, PONTOS, aoMudarLugar = () => {} }) 
     pessoas.forEach(p => {
       if (p.dancando && (m < 0.5 || p.est.busy)) { p.dancando = false; if (!p.est.busy) resetarPose(p); }
     });
+    /* os visitantes desenhados completos (perto da câmera) dançam igual aos fixos;
+       os de longe são o boneco simples, sem braço solto */
+    if (m < 0.5) pararVisitantes();
+    else {
+      const rigs = (andar.multidao && andar.multidao.rigsDetalhados) ? andar.multidao.rigsDetalhados() : [];
+      const pu = Math.abs(Math.sin(batida * Math.PI));
+      rigs.forEach((r, k) => {
+        if (!visitantesDancando.has(r)) visitantesDancando.set(r, r.c ? r.c.position.y : 0);
+        F.ik(r, V(r.s * 0.33, 1.1 + 0.28 * pu, 0.26));
+        if (r.cab) r.cab.rotation.set(0, 0, 0.08 * Math.sin(batida * Math.PI * 2 + k));
+        if (r.c) r.c.position.y = visitantesDancando.get(r) + 0.02 * pu;
+      });
+    }
     return true;
+  }
+
+  /** Volta à pose de trabalho todo visitante que dançou (inclusive os que já saíram de perto). */
+  function pararVisitantes() {
+    for (const [r, baseY] of visitantesDancando) {
+      F.ik(r, r.T0);
+      if (r.cab) r.cab.rotation.set(0, 0, 0);
+      if (r.c) r.c.position.y = baseY;
+    }
+    visitantesDancando.clear();
   }
 
   /* ----------------------------------------------------- quadro e ponto */
