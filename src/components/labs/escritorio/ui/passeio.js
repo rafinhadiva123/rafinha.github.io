@@ -5,7 +5,8 @@
 // cadeiras seguram o passo (render/colisao.js); degraus baixos (arquibancada,
 // palquinho) ele sobe, e a câmera acompanha a altura do chão. Esc ou "Sair"
 // volta à planta.
-// Noclip (ligado de saída; N ou o botão alterna): a visão atravessa paredes
+// Noclip (ligado de saída; N ou o botão alterna, vale também na câmera
+// orbital — ver render/andar.js): a visão atravessa paredes
 // e móveis e voa livre — anda para onde olha (inclusive para cima e para
 // baixo), Espaço/E sobe e Q/C desce. Desligando, o boneco volta ao chão
 // livre mais perto.
@@ -66,7 +67,6 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   const sair = el('button', { type: 'button', classe: 'pa-sair', texto: 'Sair do modo boneco' });
   sair.hidden = true;
   const noclip = el('button', { type: 'button', classe: 'pa-noclip', 'aria-pressed': 'true', title: 'Atravessar paredes e voar (N)' });
-  noclip.hidden = true;
   const ajuda = el('p', { classe: 'pa-ajuda' });
   ajuda.hidden = true;
   /* no computador: as teclas no meio da tela, até apertar qualquer uma */
@@ -89,7 +89,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
 
   /* ---- estado ---- */
   let ativo = false;
-  let atravessa = true;      /* noclip: sem colisão, voo livre */
+  const atravessa = () => andar.noclip;   /* noclip: sem colisão, voo livre */
   let x = 0, z = 0, y = OLHOS, giro = 0, inclina = -0.08;
   const teclas = new Set();
   let joyX = 0, joyY = 0;
@@ -111,12 +111,12 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     const frente = (teclas.has('ArrowUp') || teclas.has('w') ? 1 : 0) - (teclas.has('ArrowDown') || teclas.has('s') ? 1 : 0) + joyY;
     const lado = (teclas.has('d') ? 1 : 0) - (teclas.has('a') ? 1 : 0);
     const vira = (teclas.has('ArrowLeft') ? 1 : 0) - (teclas.has('ArrowRight') ? 1 : 0) - joyX;
-    const sobe = atravessa ? (teclas.has('sobe') ? 1 : 0) - (teclas.has('desce') ? 1 : 0) : 0;
+    const sobe = atravessa() ? (teclas.has('sobe') ? 1 : 0) - (teclas.has('desce') ? 1 : 0) : 0;
     if (frente || lado || vira || sobe) { rota = null; mostrarMarca(null); }
 
     if (vira) { giro += vira * GIRO * dt; mudou = true; }
     if (borda) { giro -= borda * GIRO_BORDA * dt; mudou = true; }
-    if (atravessa && (frente || lado || sobe)) {
+    if (atravessa() && (frente || lado || sobe)) {
       /* noclip: anda para onde olha, atravessando tudo */
       const v = (corre ? CORRENDO * 2 : VEL * 1.6) * dt;
       const f = Math.max(-1, Math.min(1, frente)), l = Math.max(-1, Math.min(1, lado));
@@ -148,7 +148,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
       mudou = true;
     }
     /* sobe e desce degrau com suavidade (no noclip a altura é livre) */
-    if (!atravessa) {
+    if (!atravessa()) {
       const yAlvo = altura(g, x, z) + OLHOS;
       if (Math.abs(yAlvo - y) > 0.002) { y += (yAlvo - y) * Math.min(1, dt * 9); mudou = true; }
       else if (y !== yAlvo) { y = yAlvo; mudou = true; }
@@ -159,14 +159,17 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
 
   /* ---- noclip ---- */
   function mostrarNoclip() {
-    noclip.textContent = atravessa ? 'Noclip: ligado' : 'Noclip: desligado';
-    noclip.setAttribute('aria-pressed', String(atravessa));
+    noclip.textContent = atravessa() ? 'Noclip: ligado' : 'Noclip: desligado';
+    noclip.setAttribute('aria-pressed', String(atravessa()));
   }
   mostrarNoclip();
-  function alternarNoclip(liga = !atravessa) {
-    atravessa = liga;
+  /* o estado é do andar: vale na órbita e no modo boneco */
+  function alternarNoclip(liga = !atravessa()) { andar.definirNoclip(liga); }
+  andar.aoMudarNoclip(liga => {
     teclas.delete('sobe'); teclas.delete('desce');
-    if (!atravessa) {
+    mostrarNoclip();
+    if (!ativo) { avisar(liga ? 'Noclip ligado: a câmera passa por baixo do chão e atravessa tudo.' : 'Noclip desligado.'); return; }
+    if (!liga) {
       /* volta para o chão livre mais perto; a altura desce suave no quadro */
       const p = maisPerto(g, x, z, 40) || pontoEspacoso(g, x, z, 40);
       if (p) { x = p.x; z = p.z; }
@@ -174,9 +177,8 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
       rota = null; mostrarMarca(null);
     }
     mexido = true;
-    mostrarNoclip();
-    if (ativo) avisar(atravessa ? 'Noclip ligado: atravessa paredes e voa.' : 'Noclip desligado: as paredes seguram de novo.');
-  }
+    avisar(liga ? 'Noclip ligado: atravessa paredes e voa.' : 'Noclip desligado: as paredes seguram de novo.');
+  });
   noclip.addEventListener('click', () => { alternarNoclip(); andar.renderer.domElement.focus({ preventScroll: true }); });
 
   /* ---- entrar e sair ---- */
@@ -197,7 +199,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     if (!ativo) return;
     mexido = true;
     andar.assumirCamera(quadro);
-    sair.hidden = noclip.hidden = false;
+    sair.hidden = false;
     teclasAjuda.hidden = !toqueFino.matches;
     ajuda.hidden = toqueFino.matches;
     ajuda.textContent = 'Joystick para andar · arraste para olhar (no noclip, olhe para cima ou para baixo para voar)';
@@ -211,13 +213,13 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     ativo = false;
     rota = null; teclas.clear(); joyX = joyY = 0; ultimo = null; borda = 0;
     mostrarMarca(null);
-    sair.hidden = noclip.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = mira.hidden = true;
+    sair.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = mira.hidden = true;
     boneco.hidden = false;
     palco.classList.remove('em-passeio');
     andar.assumirCamera(null);
     if (voar) {
       const fx = Math.sin(giro), fz = Math.cos(giro);
-      const chao = atravessa ? Math.max(0, y - OLHOS) : altura(g, x, z);
+      const chao = atravessa() ? Math.max(0, y - OLHOS) : altura(g, x, z);
       andar.voar(new THREE.Vector3(x - fx * 7, chao + 9, z - fz * 7), new THREE.Vector3(x + fx * 2, chao, z + fz * 2), 1000);
     }
     aoMudar(false);
@@ -284,7 +286,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   function virar(dx, dy, sens) {
     giro -= dx * sens;
     /* no noclip dá para olhar quase reto para cima e para baixo */
-    const lim = atravessa ? 1.5 : 1.0, limCima = atravessa ? 1.5 : 0.9;
+    const lim = atravessa() ? 1.5 : 1.0, limCima = atravessa() ? 1.5 : 0.9;
     inclina = Math.max(-lim, Math.min(limCima, inclina - dy * sens));
     mexido = true;
   }
@@ -331,11 +333,19 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   };
   const digitando = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   const fim = new AbortController();   /* parar() solta os ouvintes da janela */
+  /* fora do modo boneco o N só vale com o mouse ou o foco no andar */
+  let mouseNoPalco = false;
+  palco.addEventListener('pointerenter', () => { mouseNoPalco = true; });
+  palco.addEventListener('pointerleave', () => { mouseNoPalco = false; });
   window.addEventListener('keydown', e => {
-    if (!ativo || digitando(e.target)) return;
+    if (digitando(e.target)) return;
+    if ((e.key === 'n' || e.key === 'N') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey
+        && (ativo || mouseNoPalco || palco.contains(document.activeElement))) {
+      e.preventDefault(); teclasAjuda.hidden = true; alternarNoclip(); return;
+    }
+    if (!ativo) return;
     teclasAjuda.hidden = true;
     if (e.key === 'Escape') { e.preventDefault(); sairDoPasseio(); return; }
-    if ((e.key === 'n' || e.key === 'N') && !e.repeat) { e.preventDefault(); alternarNoclip(); return; }
     const k = MAPA[e.key];
     if (k) { teclas.add(k); if (k !== 'Shift') e.preventDefault(); }
   }, { signal: fim.signal });
@@ -370,7 +380,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   return {
     get ativo() { return ativo; },
     get posicao() { return { x, z, giro }; },
-    get noclip() { return atravessa; },
+    get noclip() { return atravessa(); },
     alternarNoclip,
     entrar, sair: sairDoPasseio,
     parar() { sairDoPasseio({ voar: false }); fim.abort(); },

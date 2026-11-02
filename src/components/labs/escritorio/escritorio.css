@@ -215,6 +215,8 @@
 .esc-palco .pa-noclip[aria-pressed="true"] {
   background: var(--destaque, #24306b); color: #fff; border-color: transparent;
 }
+/* fora do modo boneco não tem o "Sair" em cima dele */
+.esc-palco:not(.em-passeio) .pa-noclip { top: 12px; }
 .esc-palco .pa-noclip[hidden] { display: none; }
 .esc-palco .pa-ajuda {
   position: absolute; left: 12px; top: 60px; z-index: 3;
