@@ -44,6 +44,16 @@ function texturaNome(texto) {
   return t;
 }
 
+/** O apelido em cima da cabeça: tamanho fixo na tela, perto ou longe. */
+function etiqueta(texto) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texturaNome(texto), depthWrite: false, sizeAttenuation: false }));
+  s.userData.texto = texto;
+  s.scale.set(0.15, 0.0375, 1);
+  s.renderOrder = 5;
+  s.raycast = () => {};       /* clicar no nome não conta como clicar na pessoa */
+  return s;
+}
+
 export function criarMultidao(cena) {
   const grupo = new THREE.Group();
   cena.add(grupo);
@@ -57,6 +67,7 @@ export function criarMultidao(cena) {
   const nomes = new Map();            /* id -> Sprite */
   let detalhados = new Set();
   let foco = null;            /* cadeira que aparece sempre completa (editor aberto) */
+  let rotulados = [];         /* [{g, s}]: os fixos das piadas, com o nome preso no corpo */
   const base = new THREE.Object3D();
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
 
@@ -130,11 +141,7 @@ export function criarMultidao(cena) {
     if (!mostrar) { if (s) s.visible = false; return; }
     if (!s || s.userData.texto !== o.p.apelido) {
       if (s) { grupo.remove(s); s.material.map.dispose(); s.material.dispose(); }
-      /* tamanho fixo na tela, perto ou longe */
-      s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texturaNome(o.p.apelido), depthWrite: false, sizeAttenuation: false }));
-      s.userData.texto = o.p.apelido;
-      s.scale.set(0.15, 0.0375, 1);
-      s.renderOrder = 5;
+      s = etiqueta(o.p.apelido);
       nomes.set(o.id, s);
       grupo.add(s);
     }
@@ -143,6 +150,18 @@ export function criarMultidao(cena) {
   }
 
   const frustum = new THREE.Frustum(), pv = new THREE.Matrix4(), ponto = new THREE.Vector3();
+
+  /* o nome dos fixos aparece com a mesma regra dos visitantes: perto e na tela */
+  function atualizarRotulos(camera) {
+    let mudou = false;
+    for (const r of rotulados) {
+      r.g.getWorldPosition(ponto);
+      ponto.y += 1;
+      const ver = camera.position.distanceTo(ponto) <= RAIO_DETALHE && frustum.containsPoint(ponto);
+      if (r.s.visible !== ver) { r.s.visible = ver; mudou = true; }
+    }
+    return mudou;
+  }
 
   return {
     grupo,
@@ -170,11 +189,25 @@ export function criarMultidao(cena) {
       if (ultimoMapa) this.definir(ultimoMapa);
     },
 
+    /** Os fixos (desenhados pelas piadas) ganham o apelido em cima, preso ao corpo:
+        lista = [{g, apelido, altura}], g é o grupo do boneco. */
+    rotular(lista) {
+      for (const r of rotulados) { r.g.remove(r.s); r.s.material.map.dispose(); r.s.material.dispose(); }
+      rotulados = lista.map(({ g, apelido, altura }) => {
+        const s = etiqueta(apelido);
+        s.position.set(0, 1.95 * (altura || 1), 0);
+        s.visible = false;
+        g.add(s);
+        return { g, s };
+      });
+    },
+
     /** Decide quem aparece completo. Devolve true se algo mudou. */
     atualizar(camera) {
-      if (!tronco) return false;
       pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       frustum.setFromProjectionMatrix(pv);
+      const rotulosMudaram = atualizarRotulos(camera);
+      if (!tronco) return rotulosMudaram;
       const perto = [];
       for (const o of ocupantes) {
         const d = camera.position.distanceTo(ponto.set(o.lugar.x, 1, o.lugar.z));
@@ -211,7 +244,7 @@ export function criarMultidao(cena) {
         const velhos = [...cache.entries()].filter(([id]) => !novo.has(id)).sort((a, b) => a[1].usado - b[1].usado);
         for (const [id] of velhos.slice(0, cache.size - MAX_CACHE)) descartar(id);
       }
-      return mudou;
+      return mudou || rotulosMudaram;
     },
 
     definirFoco(id) { foco = id; },

@@ -282,6 +282,8 @@ export function criarAndar(palco) {
     },
     /** Cadeiras que a camada de piadas desenha (a multidão não repete). */
     reservarLugares(ids) { multidao.reservar(ids); marcar(); },
+    /** Apelido em cima dos fixos: [{g, apelido, altura}] (ver multidao.rotular). */
+    rotular(lista) { multidao.rotular(lista); camMudou = true; marcar(); },
     marcar,
     estatisticas() {
       return {
