@@ -28,11 +28,19 @@ export function criarAndar(palco) {
   const controles = new OrbitControls(camera, renderer.domElement);
   controles.enableDamping = true;
   controles.dampingFactor = 0.08;
-  controles.maxPolarAngle = 1.45;
-  controles.minDistance = 2.5;
-  controles.maxDistance = 180;
-  controles.screenSpacePanning = false;
+  /* noclip (ligado de saída): a órbita passa por baixo do chão, chega colada
+     nas coisas e o arrasto com o botão direito sobe e desce a câmera */
+  let noclip = true;
+  const polar = () => (noclip ? Math.PI : 1.45);
+  function aplicarLimites() {
+    if (modo !== 'topo') controles.maxPolarAngle = polar();
+    controles.minDistance = noclip ? 0.05 : 2.5;
+    controles.maxDistance = noclip ? 300 : 180;
+    controles.screenSpacePanning = noclip;
+  }
   controles.zoomSpeed = 1.4;          /* chega perto do chão com menos giros da roda */
+  let modo = '3d';
+  aplicarLimites();
 
   let sujo = true;
   const marcar = () => { sujo = true; };
@@ -79,7 +87,7 @@ export function criarAndar(palco) {
   renderer.shadowMap.needsUpdate = true;
 
   /* câmera: voo suave entre vistas */
-  let voo = null, modo = '3d';
+  let voo = null;
   function voarPara(pos, alvo, ms) {
     if (voo && voo.fim) voo.fim();
     return new Promise(fim => {
@@ -91,7 +99,7 @@ export function criarAndar(palco) {
     const k = Math.max(1, Math.pow(1.4 / Math.max(camera.aspect, 0.3), 0.85));
     return new THREE.Vector3(20 - 24 * k, 54 * k, 12 + 62 * k);
   };
-  function vista3d() { modo = '3d'; controles.maxPolarAngle = 1.45; voarPara(posInicial(), new THREE.Vector3(20, 0, 12)); }
+  function vista3d() { modo = '3d'; controles.maxPolarAngle = polar(); voarPara(posInicial(), new THREE.Vector3(20, 0, 12)); }
   function vistaTopo() {
     modo = 'topo';
     const k = Math.max(1, 1.6 / Math.max(camera.aspect, 0.3));
@@ -105,7 +113,7 @@ export function criarAndar(palco) {
     const l = LUGAR.get(id);
     if (!l) return;
     modo = '3d';
-    controles.maxPolarAngle = 1.45;
+    controles.maxPolarAngle = polar();
     const frente = new THREE.Vector3(Math.sin(l.giro), 0, Math.cos(l.giro));
     /* por cima dos monitores: a câmera fica do outro lado da bancada, alta, olhando o rosto */
     const alvo = new THREE.Vector3(l.x, 1.25 + (l.dy || 0), l.z);
@@ -184,6 +192,7 @@ export function criarAndar(palco) {
 
   /* laço: só desenha quando está sujo */
   const aoDesenharFns = new Set();
+  const aoNoclipFns = new Set();
   let livre = null;          /* modo boneco: quem mexe a câmera é ele, não a órbita */
   let anterior = performance.now();
   let ultimaLod = 0, camMudou = true, quadros = 0, fps = 0, t0fps = performance.now();
@@ -199,7 +208,7 @@ export function criarAndar(palco) {
       camera.position.lerpVectors(voo.p0, voo.p1, e);
       controles.target.lerpVectors(voo.t0, voo.t1, e);
       if (k >= 1) { const fim = voo.fim; voo = null; if (modo === 'topo') controles.maxPolarAngle = 0.0001; fim(); }
-      else if (modo !== 'topo') controles.maxPolarAngle = 1.45;
+      else if (modo !== 'topo') controles.maxPolarAngle = polar();
       marcar();
     }
     if (livre && !voo) { if (livre(dt)) marcar(); }
@@ -266,10 +275,15 @@ export function criarAndar(palco) {
     assumirCamera(fn) {
       livre = fn;
       controles.enabled = !fn;
-      if (!fn) { modo = '3d'; controles.maxPolarAngle = 1.45; controles.update(); }
+      if (!fn) { modo = '3d'; controles.maxPolarAngle = polar(); controles.update(); }
       marcar();
     },
     colisao,
+    /** Noclip da órbita (o modo boneco lê e muda o mesmo estado). */
+    get noclip() { return noclip; },
+    definirNoclip(liga) { noclip = Boolean(liga); aplicarLimites(); controles.update(); marcar(); aoNoclipFns.forEach(fn => fn(noclip)); },
+    /** fn(ligado) roda quando o noclip muda; devolve "parar". */
+    aoMudarNoclip(fn) { aoNoclipFns.add(fn); return () => aoNoclipFns.delete(fn); },
     /** fn() roda depois de cada quadro desenhado; devolve "parar". */
     aoDesenhar(fn) { aoDesenharFns.add(fn); marcar(); return () => aoDesenharFns.delete(fn); },
     focar(id) { multidao.definirFoco(id); camMudou = true; marcar(); },
