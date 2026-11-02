@@ -75,7 +75,10 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   const pino = el('div', { classe: 'pa-pino' });
   joy.appendChild(pino);
   joy.hidden = true;
-  palco.append(boneco, fantasma, sair, ajuda, teclasAjuda, joy);
+  /* mirinha no centro (mouse): o cursor some e o clique vale onde ela aponta */
+  const mira = el('div', { classe: 'pa-mira', 'aria-hidden': 'true' });
+  mira.hidden = true;
+  palco.append(boneco, fantasma, sair, ajuda, teclasAjuda, joy, mira);
 
   /* ---- estado ---- */
   let ativo = false;
@@ -157,6 +160,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     ajuda.hidden = toqueFino.matches;
     ajuda.textContent = 'Joystick para andar · arraste para olhar';
     joy.hidden = toqueFino.matches;
+    mira.hidden = !toqueFino.matches;
     andar.renderer.domElement.focus({ preventScroll: true });
   }
 
@@ -165,7 +169,7 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     ativo = false;
     rota = null; teclas.clear(); joyX = joyY = 0; ultimo = null; borda = 0;
     mostrarMarca(null);
-    sair.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = true;
+    sair.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = mira.hidden = true;
     boneco.hidden = false;
     palco.classList.remove('em-passeio');
     andar.assumirCamera(null);
@@ -268,7 +272,10 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     if (!ativo || !apertou) return;
     const clique = Math.hypot(e.clientX - apertou.x, e.clientY - apertou.y) < 8;
     apertou = null; olhar = null;
-    if (clique) aoClicar(e.clientX, e.clientY);
+    if (!clique) return;
+    /* com o mouse o cursor está escondido: o clique vale no centro, onde está a mira */
+    if (e.pointerType === 'mouse') { const r = canvas.getBoundingClientRect(); aoClicar(r.left + r.width / 2, r.top + r.height / 2); }
+    else aoClicar(e.clientX, e.clientY);
   });
   canvas.addEventListener('pointercancel', () => { olhar = null; apertou = null; });
 

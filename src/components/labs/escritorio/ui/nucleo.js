@@ -56,9 +56,9 @@ export function fraseChegada(antes, depois, meuApelido = null) {
   const tinha = new Set(antes.map(v => v.apelido));
   const novos = depois.filter(v => !tinha.has(v.apelido) && v.apelido !== meuApelido);
   if (!novos.length) return null;
-  if (novos.length === 1) return `${novos[0].apelido} acabou de sentar.`;
-  if (novos.length === 2) return `${novos[0].apelido} e ${novos[1].apelido} acabaram de sentar.`;
-  return `${novos.length} pessoas acabaram de sentar.`;
+  if (novos.length === 1) return `${novos[0].apelido} acabou de entrar.`;
+  if (novos.length === 2) return `${novos[0].apelido} e ${novos[1].apelido} acabaram de entrar.`;
+  return `${novos.length} pessoas acabaram de entrar.`;
 }
 
 /**

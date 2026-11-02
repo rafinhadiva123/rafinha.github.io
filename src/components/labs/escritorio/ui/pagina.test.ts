@@ -34,9 +34,9 @@ describe('3D ou planta', () => {
 describe('aviso de quem chegou', () => {
   const v = (apelido: string) => ({ apelido, lugar: 'x' })
   test('uma, duas ou muitas pessoas; a própria pessoa não conta', () => {
-    expect(fraseChegada([], [v('Ana')])).toBe('Ana acabou de sentar.')
-    expect(fraseChegada([v('Ana')], [v('Ana'), v('Bia'), v('Caio')])).toBe('Bia e Caio acabaram de sentar.')
-    expect(fraseChegada([], [v('A'), v('B'), v('C')])).toBe('3 pessoas acabaram de sentar.')
+    expect(fraseChegada([], [v('Ana')])).toBe('Ana acabou de entrar.')
+    expect(fraseChegada([v('Ana')], [v('Ana'), v('Bia'), v('Caio')])).toBe('Bia e Caio acabaram de entrar.')
+    expect(fraseChegada([], [v('A'), v('B'), v('C')])).toBe('3 pessoas acabaram de entrar.')
     expect(fraseChegada([], [v('Eu')], 'Eu')).toBe(null)
     expect(fraseChegada([v('Ana')], [])).toBe(null)
   })
