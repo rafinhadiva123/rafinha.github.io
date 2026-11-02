@@ -129,7 +129,7 @@ export function criarMais(camada, andar, { ocupados, escolher, mostrarMais = () 
       b.dataset.lugar = id;
       const area = nomeDaArea(id);
       b.setAttribute('aria-label', area ? `Sentar nesta cadeira livre da ${area}` : 'Sentar nesta cadeira livre');
-      b.title = 'Sentar aqui';
+      b.title = 'Ficar aqui';
     });
     for (let k = ids.length; k < pool.length; k++) { pool[k].hidden = true; delete pool[k].dataset.lugar; }
     camada.classList.toggle('perto', ids.length > 0);
