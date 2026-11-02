@@ -206,6 +206,16 @@
   border: 1px solid var(--esc-linha); background: var(--superficie, #f4f1ea);
   font-size: 0.85rem; cursor: pointer;
 }
+.esc-palco .pa-noclip {
+  position: absolute; right: 12px; top: 52px; z-index: 5;
+  padding: 7px 12px; border-radius: 6px;
+  border: 1px solid var(--esc-linha); background: var(--superficie, #f4f1ea);
+  font-size: 0.85rem; cursor: pointer;
+}
+.esc-palco .pa-noclip[aria-pressed="true"] {
+  background: var(--destaque, #24306b); color: #fff; border-color: transparent;
+}
+.esc-palco .pa-noclip[hidden] { display: none; }
 .esc-palco .pa-ajuda {
   position: absolute; left: 12px; top: 60px; z-index: 3;
   max-width: min(420px, calc(100% - 24px)); margin: 0; padding: 6px 10px;

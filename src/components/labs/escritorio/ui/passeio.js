@@ -5,6 +5,10 @@
 // cadeiras seguram o passo (render/colisao.js); degraus baixos (arquibancada,
 // palquinho) ele sobe, e a câmera acompanha a altura do chão. Esc ou "Sair"
 // volta à planta.
+// Noclip (ligado de saída; N ou o botão alterna): a visão atravessa paredes
+// e móveis e voa livre — anda para onde olha (inclusive para cima e para
+// baixo), Espaço/E sobe e Q/C desce. Desligando, o boneco volta ao chão
+// livre mais perto.
 import * as THREE from 'three';
 import { mover, maisPerto, caminho, podeFicar, pontoEspacoso, direcaoAberta, altura, pontoNaSuperficie } from '../render/colisao.js';
 
@@ -61,6 +65,8 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   fantasma.hidden = true;
   const sair = el('button', { type: 'button', classe: 'pa-sair', texto: 'Sair do modo boneco' });
   sair.hidden = true;
+  const noclip = el('button', { type: 'button', classe: 'pa-noclip', 'aria-pressed': 'true', title: 'Atravessar paredes e voar (N)' });
+  noclip.hidden = true;
   const ajuda = el('p', { classe: 'pa-ajuda' });
   ajuda.hidden = true;
   /* no computador: as teclas no meio da tela, até apertar qualquer uma */
@@ -69,7 +75,8 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     classe: 'pa-teclas', role: 'img',
     'aria-label': 'Teclas do modo boneco: W para frente, A para a esquerda, S para trás, D para a direita, Shift corre, Esc sai',
   }, `<div class="pa-wasd">${tecla('W', '↑', ' pa-w')}${tecla('A', '←', ' pa-a')}${tecla('S', '↓')}${tecla('D', '→')}</div>`
-    + `<div class="pa-extra"><span>${tecla('Shift', '', ' pa-larga')} corre</span><span>${tecla('Esc', '', ' pa-larga')} sai</span></div>`);
+    + `<div class="pa-extra"><span>${tecla('Shift', '', ' pa-larga')} corre</span><span>${tecla('Esc', '', ' pa-larga')} sai</span></div>`
+    + `<div class="pa-extra"><span>${tecla('N', '', ' pa-larga')} noclip</span><span>${tecla('Espaço', '', ' pa-larga')} sobe</span><span>${tecla('Q', '', ' pa-larga')} desce</span></div>`);
   teclasAjuda.hidden = true;
   const joy = el('div', { classe: 'pa-joy', 'aria-hidden': 'true' });
   const pino = el('div', { classe: 'pa-pino' });
@@ -78,10 +85,11 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   /* mirinha no centro (mouse): o cursor some e o clique vale onde ela aponta */
   const mira = el('div', { classe: 'pa-mira', 'aria-hidden': 'true' });
   mira.hidden = true;
-  palco.append(boneco, fantasma, sair, ajuda, teclasAjuda, joy, mira);
+  palco.append(boneco, fantasma, sair, noclip, ajuda, teclasAjuda, joy, mira);
 
   /* ---- estado ---- */
   let ativo = false;
+  let atravessa = true;      /* noclip: sem colisão, voo livre */
   let x = 0, z = 0, y = OLHOS, giro = 0, inclina = -0.08;
   const teclas = new Set();
   let joyX = 0, joyY = 0;
@@ -103,11 +111,21 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     const frente = (teclas.has('ArrowUp') || teclas.has('w') ? 1 : 0) - (teclas.has('ArrowDown') || teclas.has('s') ? 1 : 0) + joyY;
     const lado = (teclas.has('d') ? 1 : 0) - (teclas.has('a') ? 1 : 0);
     const vira = (teclas.has('ArrowLeft') ? 1 : 0) - (teclas.has('ArrowRight') ? 1 : 0) - joyX;
-    if (frente || lado || vira) { rota = null; mostrarMarca(null); }
+    const sobe = atravessa ? (teclas.has('sobe') ? 1 : 0) - (teclas.has('desce') ? 1 : 0) : 0;
+    if (frente || lado || vira || sobe) { rota = null; mostrarMarca(null); }
 
     if (vira) { giro += vira * GIRO * dt; mudou = true; }
     if (borda) { giro -= borda * GIRO_BORDA * dt; mudou = true; }
-    if (frente || lado) {
+    if (atravessa && (frente || lado || sobe)) {
+      /* noclip: anda para onde olha, atravessando tudo */
+      const v = (corre ? CORRENDO * 2 : VEL * 1.6) * dt;
+      const f = Math.max(-1, Math.min(1, frente)), l = Math.max(-1, Math.min(1, lado));
+      const c = Math.cos(inclina);
+      x += (Math.sin(giro) * c * f - Math.cos(giro) * l) * v;
+      z += (Math.cos(giro) * c * f + Math.sin(giro) * l) * v;
+      y += (Math.sin(inclina) * f + sobe) * v;
+      mudou = true;
+    } else if (frente || lado) {
       const v = (corre ? CORRENDO : VEL) * dt;
       const f = Math.max(-1, Math.min(1, frente)), l = Math.max(-1, Math.min(1, lado));
       const dx = (Math.sin(giro) * f - Math.cos(giro) * l) * v;
@@ -129,13 +147,37 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
       }
       mudou = true;
     }
-    /* sobe e desce degrau com suavidade */
-    const yAlvo = altura(g, x, z) + OLHOS;
-    if (Math.abs(yAlvo - y) > 0.002) { y += (yAlvo - y) * Math.min(1, dt * 9); mudou = true; }
-    else if (y !== yAlvo) { y = yAlvo; mudou = true; }
+    /* sobe e desce degrau com suavidade (no noclip a altura é livre) */
+    if (!atravessa) {
+      const yAlvo = altura(g, x, z) + OLHOS;
+      if (Math.abs(yAlvo - y) > 0.002) { y += (yAlvo - y) * Math.min(1, dt * 9); mudou = true; }
+      else if (y !== yAlvo) { y = yAlvo; mudou = true; }
+    }
     if (mudou) aplicarCamera();
     return mudou;
   }
+
+  /* ---- noclip ---- */
+  function mostrarNoclip() {
+    noclip.textContent = atravessa ? 'Noclip: ligado' : 'Noclip: desligado';
+    noclip.setAttribute('aria-pressed', String(atravessa));
+  }
+  mostrarNoclip();
+  function alternarNoclip(liga = !atravessa) {
+    atravessa = liga;
+    teclas.delete('sobe'); teclas.delete('desce');
+    if (!atravessa) {
+      /* volta para o chão livre mais perto; a altura desce suave no quadro */
+      const p = maisPerto(g, x, z, 40) || pontoEspacoso(g, x, z, 40);
+      if (p) { x = p.x; z = p.z; }
+      inclina = Math.max(-1.0, Math.min(0.9, inclina));
+      rota = null; mostrarMarca(null);
+    }
+    mexido = true;
+    mostrarNoclip();
+    if (ativo) avisar(atravessa ? 'Noclip ligado: atravessa paredes e voa.' : 'Noclip desligado: as paredes seguram de novo.');
+  }
+  noclip.addEventListener('click', () => { alternarNoclip(); andar.renderer.domElement.focus({ preventScroll: true }); });
 
   /* ---- entrar e sair ---- */
   async function entrar(p) {
@@ -155,10 +197,10 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     if (!ativo) return;
     mexido = true;
     andar.assumirCamera(quadro);
-    sair.hidden = false;
+    sair.hidden = noclip.hidden = false;
     teclasAjuda.hidden = !toqueFino.matches;
     ajuda.hidden = toqueFino.matches;
-    ajuda.textContent = 'Joystick para andar · arraste para olhar';
+    ajuda.textContent = 'Joystick para andar · arraste para olhar (no noclip, olhe para cima ou para baixo para voar)';
     joy.hidden = toqueFino.matches;
     mira.hidden = !toqueFino.matches;
     andar.renderer.domElement.focus({ preventScroll: true });
@@ -169,13 +211,13 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     ativo = false;
     rota = null; teclas.clear(); joyX = joyY = 0; ultimo = null; borda = 0;
     mostrarMarca(null);
-    sair.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = mira.hidden = true;
+    sair.hidden = noclip.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = mira.hidden = true;
     boneco.hidden = false;
     palco.classList.remove('em-passeio');
     andar.assumirCamera(null);
     if (voar) {
       const fx = Math.sin(giro), fz = Math.cos(giro);
-      const chao = altura(g, x, z);
+      const chao = atravessa ? Math.max(0, y - OLHOS) : altura(g, x, z);
       andar.voar(new THREE.Vector3(x - fx * 7, chao + 9, z - fz * 7), new THREE.Vector3(x + fx * 2, chao, z + fz * 2), 1000);
     }
     aoMudar(false);
@@ -241,7 +283,9 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
 
   function virar(dx, dy, sens) {
     giro -= dx * sens;
-    inclina = Math.max(-1.0, Math.min(0.9, inclina - dy * sens));
+    /* no noclip dá para olhar quase reto para cima e para baixo */
+    const lim = atravessa ? 1.5 : 1.0, limCima = atravessa ? 1.5 : 0.9;
+    inclina = Math.max(-lim, Math.min(limCima, inclina - dy * sens));
     mexido = true;
   }
 
@@ -280,13 +324,18 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   canvas.addEventListener('pointercancel', () => { olhar = null; apertou = null; });
 
   /* ---- teclado ---- */
-  const MAPA = { ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', w: 'w', a: 'a', s: 's', d: 'd', W: 'w', A: 'a', S: 's', D: 'd', Shift: 'Shift' };
+  const MAPA = {
+    ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight',
+    w: 'w', a: 'a', s: 's', d: 'd', W: 'w', A: 'a', S: 's', D: 'd', Shift: 'Shift',
+    ' ': 'sobe', e: 'sobe', E: 'sobe', q: 'desce', Q: 'desce', c: 'desce', C: 'desce',
+  };
   const digitando = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   const fim = new AbortController();   /* parar() solta os ouvintes da janela */
   window.addEventListener('keydown', e => {
     if (!ativo || digitando(e.target)) return;
     teclasAjuda.hidden = true;
     if (e.key === 'Escape') { e.preventDefault(); sairDoPasseio(); return; }
+    if ((e.key === 'n' || e.key === 'N') && !e.repeat) { e.preventDefault(); alternarNoclip(); return; }
     const k = MAPA[e.key];
     if (k) { teclas.add(k); if (k !== 'Shift') e.preventDefault(); }
   }, { signal: fim.signal });
@@ -321,6 +370,8 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   return {
     get ativo() { return ativo; },
     get posicao() { return { x, z, giro }; },
+    get noclip() { return atravessa; },
+    alternarNoclip,
     entrar, sair: sairDoPasseio,
     parar() { sairDoPasseio({ voar: false }); fim.abort(); },
     /** Para testes e para a "piada" de mandar o boneco a um ponto. */
