@@ -28,9 +28,9 @@ export function criarAndar(palco) {
   const controles = new OrbitControls(camera, renderer.domElement);
   controles.enableDamping = true;
   controles.dampingFactor = 0.08;
-  /* noclip (ligado de saída): a órbita passa por baixo do chão, chega colada
+  /* noclip (desligado de saída; N liga): a órbita passa por baixo do chão, chega colada
      nas coisas e o arrasto com o botão direito sobe e desce a câmera */
-  let noclip = true;
+  let noclip = false;
   const polar = () => (noclip ? Math.PI : 1.45);
   function aplicarLimites() {
     if (modo !== 'topo') controles.maxPolarAngle = polar();
