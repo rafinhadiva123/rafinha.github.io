@@ -44,6 +44,8 @@ export function criarPiadas(andar, { avisar = () => {}, bloqueado = () => false,
   const motor = criarMotor({ andar, pessoas, PONTOS: pontos });
   for (const p of pessoas) motor.sentar(p, p.lugar);
   andar.reservarLugares(pessoas.map(p => p.lugar));   /* a multidão não repete os 15 */
+  /* mas o nome deles aparece igual ao dos visitantes */
+  if (andar.rotular) andar.rotular(pessoas.map(p => ({ g: p.g, apelido: p.nome, altura: p.p.altura })));
   andar.marcar();
 
   const porNome = nome => pessoas.find(p => p.nome === nome);
