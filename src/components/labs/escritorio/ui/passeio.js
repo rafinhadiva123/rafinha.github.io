@@ -18,6 +18,7 @@ const VEL = 1.7, CORRENDO = 3.4;  /* m/s */
 const GIRO = 1.9;                 /* rad/s nas setas e no joystick */
 const OLHAR = 0.0055;             /* rad por pixel arrastado com o dedo */
 const OLHAR_MOUSE = 0.0042;       /* rad por pixel que o mouse anda (sem apertar) */
+const SALTO = 250;                /* px num evento só com o cursor travado: acima disso é salto falso */
 const BORDA = 0.1;                /* faixa de cada lado da tela onde o olhar continua virando */
 const GIRO_BORDA = 1.5;           /* rad/s no fundo da faixa */
 const ALCANCE = 6;                /* o "+" aparece em volta deste ponto à frente */
@@ -73,9 +74,9 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   const tecla = (t, seta, extra = '') => `<span class="pa-tecla${extra}"><b>${t}</b>${seta ? `<i aria-hidden="true">${seta}</i>` : ''}</span>`;
   const teclasAjuda = el('div', {
     classe: 'pa-teclas', role: 'img',
-    'aria-label': 'Teclas do modo boneco: W para frente, A para a esquerda, S para trás, D para a direita, Shift corre, Esc sai',
+    'aria-label': 'Teclas do modo boneco: W para frente, A para a esquerda, S para trás, D para a direita, Shift corre, Esc solta o mouse e, de novo, sai',
   }, `<div class="pa-wasd">${tecla('W', '↑', ' pa-w')}${tecla('A', '←', ' pa-a')}${tecla('S', '↓')}${tecla('D', '→')}</div>`
-    + `<div class="pa-extra"><span>${tecla('Shift', '', ' pa-larga')} corre</span><span>${tecla('Esc', '', ' pa-larga')} sai</span></div>`
+    + `<div class="pa-extra"><span>${tecla('Shift', '', ' pa-larga')} corre</span><span>${tecla('Esc', '', ' pa-larga')} solta o mouse · de novo sai</span></div>`
     + `<div class="pa-extra"><span>${tecla('N', '', ' pa-larga')} noclip</span><span>${tecla('Espaço', '', ' pa-larga')} sobe</span><span>${tecla('Q', '', ' pa-larga')} desce</span></div>`);
   teclasAjuda.hidden = true;
   const joy = el('div', { classe: 'pa-joy', 'aria-hidden': 'true' });
@@ -206,11 +207,13 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
     joy.hidden = toqueFino.matches;
     mira.hidden = !toqueFino.matches;
     andar.renderer.domElement.focus({ preventScroll: true });
+    travar();
   }
 
   function sairDoPasseio({ voar = true } = {}) {
     if (!ativo) return;
     ativo = false;
+    soltar();
     rota = null; teclas.clear(); joyX = joyY = 0; ultimo = null; borda = 0;
     mostrarMarca(null);
     sair.hidden = ajuda.hidden = teclasAjuda.hidden = joy.hidden = mira.hidden = true;
@@ -272,16 +275,40 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   }
 
   /* ---- olhar ----
-     Mouse: o olhar segue o mouse sem apertar nada; com o cursor perto da
-     borda esquerda ou direita da tela, continua virando (dá para dar a
-     volta sem o cursor bater no fim da tela). Dedo: arrasta para olhar.
-     Clique/toque sem arrastar só serve para as coisas da cena (aoClicar);
-     no chão, não faz nada. */
+     Mouse: o cursor fica travado na mira (Pointer Lock) e o olhar segue o
+     movimento do mouse, sem fim de tela. Esc solta o cursor (o navegador
+     come esse Esc); clicar na cena trava de novo e um segundo Esc sai.
+     Sem trava (navegador que não deixa), o olhar segue o cursor solto e,
+     perto da borda esquerda ou direita, continua virando. Dedo: arrasta
+     para olhar. Clique/toque sem arrastar só serve para as coisas da cena
+     (aoClicar) e para os "+" que estiverem embaixo da mira; no chão, não
+     faz nada. */
   const canvas = andar.renderer.domElement;
   let olhar = null;          /* dedo arrastando */
   let ultimo = null;         /* última posição do mouse em cima do canvas */
   let borda = 0;             /* -1..1: quanto o cursor está dentro da faixa da borda */
   let apertou = null;        /* onde o botão desceu, para separar clique de arrasto */
+
+  const travado = () => document.pointerLockElement === canvas;
+  function travar() {
+    if (!ativo || !toqueFino.matches || travado() || !canvas.requestPointerLock) return;
+    try {
+      const r = canvas.requestPointerLock();
+      if (r && r.catch) r.catch(() => mostrarTrava());
+    } catch { mostrarTrava(); }
+  }
+  function soltar() { if (travado() && document.exitPointerLock) document.exitPointerLock(); }
+  /* com o mouse: aviso fixo quando o cursor não está travado */
+  function mostrarTrava() {
+    if (!ativo || !toqueFino.matches) return;
+    ajuda.hidden = travado();
+    ajuda.textContent = 'Clique na cena para travar o mouse na mira · Esc sai';
+  }
+  document.addEventListener('pointerlockchange', () => {
+    ultimo = null; borda = 0; apertou = null;
+    mostrarTrava();
+  });
+  document.addEventListener('pointerlockerror', mostrarTrava);
 
   function virar(dx, dy, sens) {
     giro -= dx * sens;
@@ -294,6 +321,15 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   canvas.addEventListener('pointermove', e => {
     if (!ativo) return;
     if (e.pointerType === 'mouse') {
+      if (travado()) {
+        const mx = e.movementX || 0, my = e.movementY || 0;
+        /* o Chrome às vezes manda um salto falso num evento só: ignora */
+        if (Math.abs(mx) > SALTO || Math.abs(my) > SALTO) return;
+        virar(mx, my, OLHAR_MOUSE);
+        /* com a trava o clientX não muda: soma o quanto andou com o botão apertado */
+        if (apertou) apertou.andou += Math.abs(mx) + Math.abs(my);
+        return;
+      }
       if (ultimo) virar(e.clientX - ultimo.x, e.clientY - ultimo.y, OLHAR_MOUSE);
       ultimo = { x: e.clientX, y: e.clientY };
       const r = canvas.getBoundingClientRect(), faixa = r.width * BORDA;
@@ -308,7 +344,9 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { ultimo = null; borda = 0; } });
   canvas.addEventListener('pointerdown', e => {
     if (!ativo || e.button !== 0) return;
-    apertou = { x: e.clientX, y: e.clientY };
+    /* mouse solto: este clique só trava o cursor de novo, não vale como clique */
+    if (e.pointerType === 'mouse' && toqueFino.matches && !travado() && canvas.requestPointerLock) { apertou = null; travar(); return; }
+    apertou = { x: e.clientX, y: e.clientY, andou: 0 };
     if (e.pointerType !== 'mouse') {
       olhar = { id: e.pointerId, x: e.clientX, y: e.clientY };
       canvas.setPointerCapture(e.pointerId);
@@ -316,13 +354,26 @@ export function criarPasseio(palco, andar, { avisar = () => {}, aoMudar = () => 
   });
   canvas.addEventListener('pointerup', e => {
     if (!ativo || !apertou) return;
-    const clique = Math.hypot(e.clientX - apertou.x, e.clientY - apertou.y) < 8;
+    const clique = Math.hypot(e.clientX - apertou.x, e.clientY - apertou.y) + apertou.andou < 8;
     apertou = null; olhar = null;
     if (!clique) return;
     /* com o mouse o cursor está escondido: o clique vale no centro, onde está a mira */
-    if (e.pointerType === 'mouse') { const r = canvas.getBoundingClientRect(); aoClicar(r.left + r.width / 2, r.top + r.height / 2); }
-    else aoClicar(e.clientX, e.clientY);
+    if (e.pointerType === 'mouse') {
+      const r = canvas.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const mais = maisNaMira(cx, cy);
+      if (mais) { mais.click(); return; }
+      aoClicar(cx, cy);
+    } else aoClicar(e.clientX, e.clientY);
   });
+  /** O botão "+" embaixo da mira (com folga de uns pixels), ou null. */
+  function maisNaMira(cx, cy, folga = 6) {
+    for (const b of palco.querySelectorAll('button.mais')) {
+      if (b.hidden) continue;
+      const q = b.getBoundingClientRect();
+      if (q.width && cx >= q.left - folga && cx <= q.right + folga && cy >= q.top - folga && cy <= q.bottom + folga) return b;
+    }
+    return null;
+  }
   canvas.addEventListener('pointercancel', () => { olhar = null; apertou = null; });
 
   /* ---- teclado ---- */
