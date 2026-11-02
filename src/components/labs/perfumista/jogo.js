@@ -14,21 +14,47 @@ const pool = (k) => [...new Set(P.flatMap((p) => p[k]))]
 const has = (p, note) => ['t', 'h', 'f'].some((k) => p[k].includes(note))
 const attr = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
 
+// Toda fórmula precisa terminar com pelo menos MIN_RESULTS perfumes que tenham
+// 2 ou mais das 3 notas escolhidas (em qualquer camada). Por isso cada etapa só
+// oferece notas que ainda permitem chegar lá.
+const MIN_HITS = 2
+const MIN_RESULTS = 3
+const NOTES = P.map((p) => new Set([...p.t, ...p.h, ...p.f]))
+const POOLS = { t: pool('t'), h: pool('h'), f: pool('f') }
+const hitsIn = (i, notes) => notes.reduce((n, x) => n + (NOTES[i].has(x) ? 1 : 0), 0)
+
+// Notas de fundo que, somadas a topo + corpo, fecham a fórmula com perfumes suficientes.
+function validFundo(a, b) {
+  let both = 0
+  const freq = new Map()
+  NOTES.forEach((s, i) => {
+    const h = hitsIn(i, [a, b])
+    if (h === 2) both++
+    else if (h === 1) s.forEach((n) => freq.set(n, (freq.get(n) || 0) + 1))
+  })
+  const need = MIN_RESULTS - both
+  return POOLS.f.filter((n) => n !== a && n !== b && (need <= 0 || (freq.get(n) || 0) >= need))
+}
+
+const MIN_CHOICES = 3 // a etapa seguinte precisa ter ao menos isso de opções
+const corpoCache = new Map()
+function validCorpo(a) {
+  if (!corpoCache.has(a)) corpoCache.set(a, POOLS.h.filter((n) => n !== a && validFundo(a, n).length >= MIN_CHOICES))
+  return corpoCache.get(a)
+}
+let topoCache = null
+const validTopo = () => (topoCache ??= POOLS.t.filter((n) => validCorpo(n).length >= MIN_CHOICES))
+
 export function iniciar(raiz) {
   const app = raiz.querySelector('[data-app]')
   const intro = raiz.querySelector('[data-intro]')
   let picks = [] // [{k,note}]
   let options = []
 
-  function makeOptions(layer) {
-    const all = pool(layer.k).filter((n) => !picks.some((x) => x.note === n))
-    if (!picks.length) return shuffle(all).slice(0, 6)
-    // notas de perfumes que já combinam com as escolhas anteriores, para a fórmula fazer sentido
-    const related = P.filter((p) => picks.some((x) => has(p, x.note)))
-    const near = [...new Set(related.flatMap((p) => p[layer.k]))].filter((n) => all.includes(n))
-    const a = shuffle(near).slice(0, 3)
-    const rest = shuffle(all.filter((n) => !a.includes(n))).slice(0, 6 - a.length)
-    return shuffle(a.concat(rest))
+  function makeOptions() {
+    const [a, b] = picks.map((x) => x.note)
+    const valid = picks.length === 0 ? validTopo() : picks.length === 1 ? validCorpo(a) : validFundo(a, b)
+    return shuffle(valid).slice(0, 6)
   }
 
   function score(p) {
@@ -83,6 +109,7 @@ export function iniciar(raiz) {
 
   function renderResult() {
     const ranked = shuffle(P)
+      .filter((p) => picks.filter((x) => has(p, x.note)).length >= MIN_HITS)
       .map((p) => ({ p, ...score(p) }))
       .sort((a, b) => b.s - a.s || b.same - a.same)
       .slice(0, 3)
@@ -122,7 +149,7 @@ export function iniciar(raiz) {
     app.querySelectorAll('.vial').forEach((b) =>
       b.addEventListener('click', () => {
         picks.push({ k: LAYERS[picks.length].k, note: b.dataset.note })
-        if (picks.length < 3) options = makeOptions(LAYERS[picks.length])
+        if (picks.length < 3) options = makeOptions()
         render()
         voltarAoTopo()
       }),
@@ -131,12 +158,12 @@ export function iniciar(raiz) {
     if (again)
       again.addEventListener('click', () => {
         picks = []
-        options = makeOptions(LAYERS[0])
+        options = makeOptions()
         render()
         voltarAoTopo()
       })
   }
 
-  options = makeOptions(LAYERS[0])
+  options = makeOptions()
   render()
 }
