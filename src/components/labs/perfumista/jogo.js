@@ -15,22 +15,22 @@ const has = (p, note) => ['t', 'h', 'f'].some((k) => p[k].includes(note))
 const attr = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
 
 // Toda fórmula precisa terminar com pelo menos MIN_RESULTS perfumes que tenham
-// 2 ou mais das 3 notas escolhidas (em qualquer camada). Por isso cada etapa só
-// oferece notas que ainda permitem chegar lá.
+// 2 ou mais das 3 notas escolhidas, cada uma na mesma camada em que foi escolhida
+// (topo no topo, corpo no corpo, fundo no fundo). Por isso cada etapa só oferece
+// notas que ainda permitem chegar lá.
 const MIN_HITS = 2
 const MIN_RESULTS = 3
-const NOTES = P.map((p) => new Set([...p.t, ...p.h, ...p.f]))
 const POOLS = { t: pool('t'), h: pool('h'), f: pool('f') }
-const hitsIn = (i, notes) => notes.reduce((n, x) => n + (NOTES[i].has(x) ? 1 : 0), 0)
+const sameLayerHits = (p, picks) => picks.filter((x) => p[x.k].includes(x.note)).length
 
 // Notas de fundo que, somadas a topo + corpo, fecham a fórmula com perfumes suficientes.
 function validFundo(a, b) {
   let both = 0
   const freq = new Map()
-  NOTES.forEach((s, i) => {
-    const h = hitsIn(i, [a, b])
+  P.forEach((p) => {
+    const h = (p.t.includes(a) ? 1 : 0) + (p.h.includes(b) ? 1 : 0)
     if (h === 2) both++
-    else if (h === 1) s.forEach((n) => freq.set(n, (freq.get(n) || 0) + 1))
+    else if (h === 1) p.f.forEach((n) => freq.set(n, (freq.get(n) || 0) + 1))
   })
   const need = MIN_RESULTS - both
   return POOLS.f.filter((n) => n !== a && n !== b && (need <= 0 || (freq.get(n) || 0) >= need))
@@ -109,16 +109,16 @@ export function iniciar(raiz) {
 
   function renderResult() {
     const ranked = shuffle(P)
-      .filter((p) => picks.filter((x) => has(p, x.note)).length >= MIN_HITS)
+      .filter((p) => sameLayerHits(p, picks) >= MIN_HITS)
       .map((p) => ({ p, ...score(p) }))
-      .sort((a, b) => b.s - a.s || b.same - a.same)
+      .sort((a, b) => b.same - a.same || b.s - a.s)
       .slice(0, 3)
     const cards = ranked
       .map((r, idx) => {
-        const hits = picks.filter((x) => has(r.p, x.note)).length
+        const hits = sameLayerHits(r.p, picks)
         return `<article class="perf ${idx === 0 ? 'first' : ''}">
         <div class="perf-head"><div><span class="perf-brand">${r.p.b}</span><h3 class="perf-name">${r.p.n}</h3></div>
-        <span class="score">${hits} de 3 notas da sua fórmula</span></div>
+        <span class="score">${hits} de 3 notas na mesma camada</span></div>
         <div class="rows">
           <span class="lab">Topo</span><div class="tags">${tags(r.p, 't')}</div>
           <span class="lab">Corpo</span><div class="tags">${tags(r.p, 'h')}</div>
