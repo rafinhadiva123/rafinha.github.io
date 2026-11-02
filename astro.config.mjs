@@ -12,7 +12,6 @@ export default defineConfig({
   integrations: [
     mdx(),
     react(),
-    // a página de teste do escritório fica fora do sitemap
-    sitemap({ filter: pagina => !pagina.includes('/labs/escritorio-teste') }),
+    sitemap(),
   ],
 });

@@ -1,6 +1,6 @@
 // O Simulador de escritório em 3D: o núcleo (ui/nucleo.js) com o andar em
 // three.js, os "+" das cadeiras, o modo boneco e as piadas dos 15 fixos.
-// A página do site e a página de teste carregam este arquivo só quando vão
+// A página do site carrega este arquivo só quando vai
 // mostrar o 3D (import dinâmico), então o three não pesa em mais lugar nenhum.
 import { criarAndar } from '../render/andar.js';
 import { criarMais } from './mais.js';
