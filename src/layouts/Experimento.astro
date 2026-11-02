@@ -80,6 +80,11 @@ const dataFormatada = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).fo
     height: calc(100dvh - 3.6rem - 1px);
   }
 
+  /* em tela inteira o andar termina na barra: nada de rodapé embaixo */
+  :global(body:has(.experimento__corpo--tela) .rodape) {
+    display: none;
+  }
+
   .visualmente-oculto {
     position: absolute;
     width: 1px;
