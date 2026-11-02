@@ -1,9 +1,12 @@
-// Que palmeira é você? Teste de personalidade: 10 perguntas, 10 palmeiras.
+// Que palmeira é você? Teste de personalidade: 6 perguntas, 10 palmeiras.
 // Telas: intro, perguntas, desempate (só se precisar), resultado e galeria.
 // Redesenha o painel com innerHTML, igual ao Ateliê de Notas.
 import { PALMS, QS, FOTOS } from './dados.js'
 
 const byId = Object.fromEntries(PALMS.map(p => [p.id, p]));
+// Pontuação máxima possível de cada palmeira (2 por pergunta em que é primária, 1 nas demais em que aparece).
+const MAX = Object.fromEntries(PALMS.map(p => [p.id, QS.reduce((m,q)=>m+Math.max(0,...q.o.map(o=>o.p===p.id?2:o.s===p.id?1:0)),0)]));
+const pct = r => Math.round(r.pts/(MAX[r.id]||1)*100);
 const STYLE = {
   imp:{c:'#1f6b47',leaf:'#1f6b47',trunk:'#b9b2a4'}, tam:{c:'#a9691a',leaf:'#4f6b2a',trunk:'#9b7b4f'},
   pal:{c:'#5b3a82',leaf:'#2f6a4a',trunk:'#8b8575'}, rab:{c:'#c0551f',leaf:'#2e7a3f',trunk:'#a7a29a'},
@@ -128,7 +131,7 @@ export function iniciar(raiz){
       <div class="hero">
         <div style="display:flex;flex-direction:column;gap:16px">
           <span class="eyebrow">Teste de personalidade</span>
-          <p class="lede">São 10 perguntas rápidas e 10 palmeiras possíveis, da imperial à palmeira batom. No final, você descobre qual delas combina com o seu jeito, com direito a um fato botânico de verdade.</p>
+          <p class="lede">São 6 perguntas rápidas e 10 palmeiras possíveis, da imperial à palmeira batom. No final, você descobre qual delas combina com o seu jeito, com direito a um fato botânico de verdade.</p>
           <div class="row"><button class="btn" id="go">Começar o teste</button><button class="link" id="gal">Conhecer as 10 palmeiras</button></div>
         </div>
         <div class="art" aria-hidden="true">${['imp','bar','was','bat'].map(id=>`<span>${palmSVG(id)}</span>`).join('')}</div>
@@ -160,7 +163,7 @@ export function iniciar(raiz){
       rows=tally(st.ans); rows.sort((a,b)=>(b.id===p.id)-(a.id===p.id)); const rest=rows.filter(r=>r.id!==p.id);
       also=`<h3 class="sec-title">Você também tem um pouco de…</h3><div class="also">${rest.slice(0,2).map(r=>`<button class="chip" data-open="${r.id}" style="--c:${STYLE[r.id].c}">${palmSVG(r.id,{vb:'30 40 140 230'})}<span class="nm">${byId[r.id].nome}</span></button>`).join('')}</div>`;
     }
-    const bars=rows?`<h3 class="sec-title">Quanto você combina com cada palmeira</h3><ul class="bars" aria-label="Afinidade com cada palmeira">${rows.map(r=>`<li style="--c:${STYLE[r.id].c}"><span class="nm">${byId[r.id].nome}</span><span class="track"><span class="fill" style="width:${Math.round(r.pts/15*100)}%"></span></span><span class="pc">${Math.round(r.pts/15*100)}%</span></li>`).join('')}</ul>`:'';
+    const bars=rows?`<h3 class="sec-title">Quanto você combina com cada palmeira</h3><ul class="bars" aria-label="Afinidade com cada palmeira">${rows.map(r=>`<li style="--c:${STYLE[r.id].c}"><span class="nm">${byId[r.id].nome}</span><span class="track"><span class="fill" style="width:${pct(r)}%"></span></span><span class="pc">${pct(r)}%</span></li>`).join('')}</ul>`:'';
     return `<section class="screen" style="--c:${s.c}">
       ${st.shared?`<span class="eyebrow">${st.fromGallery?'Conheça as palmeiras':'Alguém te mandou este resultado'}</span>`:'<span class="eyebrow">Seu resultado</span>'}
       <div class="res-hero">
