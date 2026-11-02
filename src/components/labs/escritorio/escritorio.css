@@ -207,7 +207,8 @@
   font-size: 0.85rem; cursor: pointer;
 }
 .esc-palco .pa-noclip {
-  position: absolute; right: 12px; top: 52px; z-index: 5;
+  /* abaixo do editor (z-index 4): com o painel aberto, ele cobre o botão */
+  position: absolute; right: 12px; top: 52px; z-index: 3;
   padding: 7px 12px; border-radius: 6px;
   border: 1px solid var(--esc-linha); background: var(--superficie, #f4f1ea);
   font-size: 0.85rem; cursor: pointer;
